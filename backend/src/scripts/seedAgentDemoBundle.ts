@@ -1,6 +1,6 @@
 import dotenv from 'dotenv'
 import database, { testConnection } from '../config/database'
-import { Elderly, HealthRecord, ServiceRecord } from '../models'
+import { Elderly } from '../models'
 import medicalAssistantService from '../services/medicalAssistantService'
 import agentOrchestratorService from '../services/agentOrchestratorService'
 
@@ -83,7 +83,6 @@ async function seedAgentDemoBundle() {
       const elderly = elderlyList[i]
       const tpl = templates[i % templates.length]
 
-      // 1) 注入最近24h健康点（触发异常识别/预警）
       const ingest = await medicalAssistantService.ingestRealtimeData(
         elderly.id,
         tpl.points.map((p, idx) => ({
@@ -98,7 +97,6 @@ async function seedAgentDemoBundle() {
         healthSuccess += 1
       }
 
-      // 2) 给总控Agent补充服务任务（演示可见）
       await agentOrchestratorService.quickDispatchFromElderly({
         elderlyId: elderly.id,
         requestType: tpl.requestType,

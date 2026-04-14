@@ -19,11 +19,10 @@ import {
   Progress,
   Switch
 } from 'antd'
-import { SendOutlined, ClearOutlined, ExportOutlined, FilterOutlined, RocketOutlined } from '@ant-design/icons'
+import { SendOutlined, ClearOutlined, ExportOutlined, FilterOutlined, RocketOutlined, SearchOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import axios from '../utils/axiosInstance'
 
-const { TextArea } = Input
 const { Title, Text } = Typography
 const { Option } = Select
 const { RangePicker } = DatePicker
@@ -58,7 +57,6 @@ const DataQuery: React.FC = () => {
   const [recentSessions, setRecentSessions] = useState<Array<{ query: string; answer: string; traceId: string; escalate: boolean }>>([])
 
   const [summary, setSummary] = useState<string>('')
-  const [suggestions, setSuggestions] = useState<string[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [explainability, setExplainability] = useState<Explainability | null>(null)
   const [responseMode, setResponseMode] = useState<'demo' | 'live' | ''>('')
@@ -81,26 +79,6 @@ const DataQuery: React.FC = () => {
     riskLevel: '',
     address: ''
   })
-
-  // 获取查询建议
-  const handleGetSuggestions = async (input: string) => {
-    if (input.length < 2) {
-      setSuggestions([])
-      return
-    }
-
-    try {
-      const response = await axios.get('/query/suggestions', {
-        params: { input }
-      })
-
-      if (response.data.success) {
-        setSuggestions(response.data.data || [])
-      }
-    } catch (error) {
-      console.error('获取查询建议失败:', error)
-    }
-  }
 
   const isNetworkError = (error: unknown) => {
     const err = error as AxiosError

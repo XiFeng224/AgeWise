@@ -34,6 +34,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate()
   const location = useLocation()
 
+  const activeSection = useMemo(() => {
+    if (location.pathname.startsWith('/agent')) return '/agent'
+    if (['/risk', '/elderly', '/health', '/statistics', '/query', '/notifications', '/medical-protection'].includes(location.pathname)) return '/business'
+    if (location.pathname === '/settings') return '/system'
+    return '/'
+  }, [location.pathname])
+
   // 获取未读通知数量
   const getUnreadCount = async () => {
     try {
@@ -70,44 +77,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       label: '首页',
     },
     {
-      key: '/dashboard',
-      icon: <DashboardOutlined />,
-      label: '工作台',
-    },
-    {
-      key: '/elderly',
-      icon: <UserOutlined />,
-      label: '老人管理',
-    },
-    {
-      key: '/risk',
-      icon: <WarningOutlined />,
-      label: '风险预警',
-    },
-    {
-      key: '/query',
-      icon: <SearchOutlined />,
-      label: '智能查询',
-    },
-    {
-      key: '/statistics',
-      icon: <BarChartOutlined />,
-      label: '统计分析',
-    },
-    {
-      key: '/health',
-      icon: <HeartOutlined />,
-      label: '健康档案',
-    },
-    {
-      key: '/medical-protection',
-      icon: <VideoCameraOutlined />,
-      label: '医疗防护视频',
-    },
-    {
       key: '/agent',
       icon: <RobotOutlined />,
-      label: '总控Agent',
+      label: 'Agent 平台',
       children: [
         {
           key: '/agent/command',
@@ -117,17 +89,54 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {
           key: '/agent/vnext',
           icon: <RobotOutlined />,
-          label: 'Agent VNext',
+          label: '运行台',
         },
       ],
     },
     {
-      key: '/notifications',
-      icon: <BellOutlined />,
-      label: '通知中心',
+      key: '/business',
+      icon: <DashboardOutlined />,
+      label: '业务模块',
+      children: [
+        {
+          key: '/risk',
+          icon: <WarningOutlined />,
+          label: '风险预警',
+        },
+        {
+          key: '/elderly',
+          icon: <UserOutlined />,
+          label: '老人管理',
+        },
+        {
+          key: '/health',
+          icon: <HeartOutlined />,
+          label: '健康档案',
+        },
+        {
+          key: '/statistics',
+          icon: <BarChartOutlined />,
+          label: '数据分析',
+        },
+        {
+          key: '/query',
+          icon: <SearchOutlined />,
+          label: '智能问答',
+        },
+        {
+          key: '/notifications',
+          icon: <BellOutlined />,
+          label: '通知中心',
+        },
+        {
+          key: '/medical-protection',
+          icon: <VideoCameraOutlined />,
+          label: '医疗防护视频',
+        },
+      ],
     },
     {
-      key: '/settings',
+      key: '/system',
       icon: <SettingOutlined />,
       label: '系统设置',
     },
@@ -147,6 +156,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   ]
 
   const handleMenuClick = ({ key }: { key: string }) => {
+    if (key === '/system') {
+      navigate('/settings')
+      return
+    }
     navigate(key)
   }
 
@@ -175,15 +188,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="layout-logo">
           <HomeOutlined className="logo-icon" />
           <span className={collapsed ? 'logo-text collapsed' : 'logo-text'}>
-            智护银龄
+            银龄智护 Agent
           </span>
         </div>
         <Menu
           theme="dark"
           mode="inline"
-          selectedKeys={[location.pathname]}
+          selectedKeys={[activeSection]}
           items={menuItems.filter((item: any) => {
-            if (item.key === '/settings') return role === 'admin' || role === 'manager'
+            if (item.key === '/system') return role === 'admin' || role === 'manager'
             return true
           })}
           onClick={handleMenuClick}
@@ -192,12 +205,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </Sider>
       <AntLayout>
         <Header className="layout-header">
-          <Button
-            type="text"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
-            className="layout-header-toggle"
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Button
+              type="text"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+              className="layout-header-toggle"
+            />
+            <div>
+              <Text strong style={{ display: 'block', color: '#31506e' }}>银龄智护 Agent 平台</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>Agent 闭环编排 · 问答 · 执行 · 追踪</Text>
+            </div>
+          </div>
           <div className="layout-header-right">
             <Button 
               type="text" 

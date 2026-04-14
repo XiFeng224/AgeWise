@@ -29,6 +29,7 @@ import {
   ReloadOutlined,
   EyeOutlined
 } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
 import axios from '../utils/axiosInstance'
 
 const { Title } = Typography
@@ -58,6 +59,7 @@ interface WarningItem {
 }
 
 const RiskWarning: React.FC = () => {
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [warnings, setWarnings] = useState<WarningItem[]>([])
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'processing' | 'resolved'>('all')
@@ -390,6 +392,8 @@ const RiskWarning: React.FC = () => {
         title="预警列表"
         extra={
           <Space>
+            <Button onClick={() => navigate('/query')}>去智能问答</Button>
+            <Button type="primary" onClick={() => navigate('/agent/vnext')}>去运行台处置</Button>
             <DatePicker.RangePicker
               value={dateRange}
               presets={[

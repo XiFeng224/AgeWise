@@ -1,6 +1,6 @@
 import React, { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { ConfigProvider, Spin } from 'antd'
+import { ConfigProvider, Spin, App as AntdApp } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import Layout from './components/Layout'
 import Login from './pages/Login'
@@ -60,9 +60,40 @@ const App: React.FC = () => {
   )
 
   return (
-    <ConfigProvider locale={zhCN}>
-      <Router>
-        <Routes>
+    <ConfigProvider
+      locale={zhCN}
+      theme={{
+        token: {
+          colorPrimary: '#4f79a7',
+          colorSuccess: '#5f7f94',
+          colorWarning: '#c2a16c',
+          colorError: '#b17b7b',
+          borderRadius: 16,
+          colorBgLayout: '#f6f9fc',
+          colorBgContainer: '#ffffff',
+          colorTextBase: '#26323d',
+          fontSize: 14
+        },
+        components: {
+          Layout: {
+            headerBg: '#ffffff',
+            siderBg: '#2e3e52',
+            bodyBg: '#f6f9fc'
+          },
+          Menu: {
+            darkItemBg: '#2e3e52',
+            darkItemSelectedBg: '#4f79a7',
+            darkItemSelectedColor: '#ffffff'
+          },
+          Card: {
+            borderRadiusLG: 16
+          }
+        }
+      }}
+    >
+      <AntdApp>
+        <Router>
+          <Routes>
           <Route path="/login" element={<Login />} />
           <Route 
             path="/" 
@@ -224,8 +255,9 @@ const App: React.FC = () => {
               </ProtectedRoute>
             } 
           />
-        </Routes>
-      </Router>
+          </Routes>
+        </Router>
+      </AntdApp>
     </ConfigProvider>
   )
 }

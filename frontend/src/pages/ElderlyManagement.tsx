@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Table,
   Card,
@@ -46,6 +47,7 @@ interface Elderly {
 }
 
 const ElderlyManagement: React.FC = () => {
+  const navigate = useNavigate()
   const [elders, setElders] = useState<Elderly[]>([])
   const [loading, setLoading] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
@@ -198,6 +200,8 @@ const ElderlyManagement: React.FC = () => {
         title="老人列表"
         extra={
           <Space>
+            <Button onClick={() => navigate('/query')}>问问 Agent</Button>
+            <Button type="primary" onClick={() => navigate('/agent/vnext')}>生成任务</Button>
             <Input
               placeholder="搜索姓名/电话/地址"
               allowClear

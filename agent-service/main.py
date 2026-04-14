@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 import os
+import time
 from dotenv import load_dotenv
 
 from agents.nlp_agent import NLPAgent
@@ -146,6 +147,28 @@ async def health_check():
             "report_agent": "active"
         }
     }
+
+@app.get('/health/llm')
+async def llm_health_check():
+    """大模型可用性检查（千问/兜底模型）"""
+    started_at = time.time()
+    try:
+        probe = nlp_agent.generate_response('请仅回复：ok', context='health_check')
+        latency_ms = int((time.time() - started_at) * 1000)
+
+        return {
+            'status': 'healthy',
+            'provider': 'aliyun-bailian' if nlp_agent.aliyun_client.enabled else ('openai' if nlp_agent.client is not None else 'rule-fallback'),
+            'latency_ms': latency_ms,
+            'sample': (probe or '')[:80]
+        }
+    except Exception as e:
+        latency_ms = int((time.time() - started_at) * 1000)
+        raise HTTPException(status_code=503, detail={
+            'status': 'unhealthy',
+            'latency_ms': latency_ms,
+            'error': str(e)
+        })
 
 if __name__ == "__main__":
     uvicorn.run(

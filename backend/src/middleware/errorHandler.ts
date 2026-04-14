@@ -5,9 +5,12 @@ export const errorHandler = (
   error: any,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
-  console.error('错误详情:', error)
+  const traceId = req.traceId
+  const logPrefix = traceId ? `[traceId=${traceId}]` : ''
+
+  console.error(`${logPrefix} 错误详情:`, error)
 
   if (error.name === 'SequelizeValidationError') {
     const details = error.errors.map((err: any) => ({

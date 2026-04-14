@@ -15,6 +15,11 @@ interface DispatchInput {
   eventSummary: string
 }
 
+interface AnswerInput {
+  question: string
+  context?: Record<string, any>
+}
+
 class AIAgentService {
   private parseModelJson(content: string) {
     const raw = String(content || '').trim()
@@ -152,9 +157,9 @@ class AIAgentService {
     }
   }
 
-  async copilot(question: string, context?: Record<string, any>) {
-    const system = `你是机构养老运营副驾AI。输出JSON：{summary,todo,risks,communication}`
-    const user = `问题：${question}\n上下文：${JSON.stringify(context || {})}`
+  async answer(input: AnswerInput) {
+    const system = `你是社区养老场景的智能问答助手。请先直接回答用户问题，再给出是否需要执行动作的判断。输出JSON：{answer,analysis,needAction,actionSuggestion,followUpQuestions}`
+    const user = `问题：${input.question}\n上下文：${JSON.stringify(input.context || {})}`
 
     try {
       const result = await this.callQwen([
@@ -166,23 +171,46 @@ class AIAgentService {
         _meta: { source: 'qwen' }
       }
     } catch (error: any) {
-      console.error('Qwen copilot 调用失败:', {
+      console.error('Qwen answer 调用失败:', {
         status: error?.response?.status,
         data: error?.response?.data,
         message: error?.message
       })
 
+      const q = String(input.question || '')
+      const riskKeywords = ['血压', '跌倒', '胸痛', '呼吸', '高危', '发烧', '意识']
+      const likelyRisk = riskKeywords.some((k) => q.includes(k))
+
       return {
-        summary: '当前建议先处理高优先级任务并检查超时SLA。',
-        todo: ['先处置高风险预警', '执行超时升级', '同步家属进展'],
-        risks: ['夜班人手不足可能导致延迟'],
-        communication: '建议向家属说明已启动紧急跟进流程。',
+        answer: likelyRisk
+          ? '从当前描述看，这可能属于需要优先关注的健康风险。建议先确认生命体征，再根据结果决定是否升级处置。'
+          : '根据当前信息，建议先补充关键背景，再做进一步判断。',
+        analysis: likelyRisk
+          ? '问题包含潜在健康风险关键词，建议以安全优先的方式处理。'
+          : '当前问题更偏信息不充分的咨询，建议先补充具体情况。',
+        needAction: likelyRisk,
+        actionSuggestion: likelyRisk
+          ? '建议立即安排电话确认或现场复测，并视情况创建Agent任务。'
+          : '如需落地执行，可继续补充信息后创建任务。',
+        followUpQuestions: ['老人目前是否清醒？', '是否有生命体征数据？', '最近是否有类似情况？'],
         _meta: {
           source: 'fallback',
           status: error?.response?.status || null,
           message: error?.message || 'unknown_error'
         }
       }
+    }
+  }
+
+  async copilot(question: string, context?: Record<string, any>) {
+    const answer = await this.answer({ question, context })
+    return {
+      summary: answer.answer,
+      todo: answer.actionSuggestion ? [answer.actionSuggestion] : [],
+      risks: answer.analysis ? [answer.analysis] : [],
+      communication: answer.needAction ? '建议尽快进行下一步处置。' : '可先观察并补充信息。',
+      answer,
+      _meta: answer._meta
     }
   }
 

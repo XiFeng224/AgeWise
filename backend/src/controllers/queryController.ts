@@ -63,7 +63,7 @@ const buildExplainability = (query: string, result: any) => {
 // 自然语言查询
 export const naturalLanguageQuery = async (req: Request, res: Response) => {
   try {
-    const { query } = req.body
+    const { query, modelPreference, deepThink, searchMode } = req.body
 
     if (!query) {
       return res.status(400).json({
@@ -82,14 +82,21 @@ export const naturalLanguageQuery = async (req: Request, res: Response) => {
     const startedAt = Date.now()
 
     // 处理自然语言查询
-    const result = await agentService.processNaturalLanguageQuery(query)
+    const result = await agentService.processNaturalLanguageQuery(query, {
+      modelPreference,
+      deepThink: Boolean(deepThink),
+      searchMode: Boolean(searchMode)
+    })
 
     const enrichedResult = {
       ...result,
       explainability: buildExplainability(query, result),
       mode: isDemoMode ? 'demo' : 'live',
       generatedAt: new Date().toISOString(),
-      latencyMs: Date.now() - startedAt
+      latencyMs: Date.now() - startedAt,
+      answer: result.answer || '',
+      shouldEscalate: Boolean(result.shouldEscalate),
+      suggestedAction: result.suggestedAction || []
     }
 
     // 缓存结果

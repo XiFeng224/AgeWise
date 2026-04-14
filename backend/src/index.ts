@@ -14,6 +14,8 @@ import { sendError, sendSuccess } from './utils/response'
 import { CronService } from './services/cronService'
 import { User, Elderly } from './models'
 import bcrypt from 'bcryptjs'
+import { requestContext } from './middleware/requestContext'
+import { createRateLimiter } from './middleware/rateLimit'
 
 // 加载环境变量
 dotenv.config()
@@ -24,10 +26,16 @@ const shouldAlterSchema = process.env.DB_SYNC_ALTER === 'true'
 
 app.set('trust proxy', 1)
 
+const globalLimiter = createRateLimiter({ windowMs: 60_000, max: 300, keyPrefix: 'global' })
+const agentLimiter = createRateLimiter({ windowMs: 60_000, max: 40, keyPrefix: 'agent' })
+
 // 中间件配置
+app.use(requestContext)
 app.use(helmet())
 app.use(compression())
 app.use(cors())
+app.use(globalLimiter)
+app.use('/api/agent-vnext', agentLimiter)
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
@@ -53,7 +61,7 @@ app.use(errorHandler)
 
 // 404 处理
 app.use('*', (req, res) => {
-  return sendError(res, 'Route not found', 404, { path: req.originalUrl })
+  return sendError(res, 'Route not found', 404, { path: req.originalUrl, traceId: req.traceId })
 })
 
 // 创建 HTTP 服务器

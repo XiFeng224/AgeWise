@@ -12,7 +12,7 @@ class AgentService {
    * @param query 自然语言查询字符串
    * @returns 处理后的查询结果
    */
-  async processNaturalLanguageQuery(query: string): Promise<any> {
+  async processNaturalLanguageQuery(query: string, options: { modelPreference?: string; deepThink?: boolean; searchMode?: boolean } = {}): Promise<any> {
     try {
       if (!query || query.trim() === '') {
         return {
@@ -21,10 +21,34 @@ class AgentService {
         }
       }
 
+      const preference = (options.modelPreference || 'auto').toLowerCase()
+      const deepThink = Boolean(options.deepThink)
+      const searchMode = Boolean(options.searchMode)
+
+      // 优先调用指定模型或自动选择
+      const preferred = await this.callPreferredModel(query, preference, { deepThink, searchMode })
+      if (preferred?.intent) {
+        const result = await this.executeQuery(preferred, query)
+        const answer = await this.buildAnswer(query, result, preferred, preferred.modelSource || 'preferred')
+        return {
+          success: true,
+          intent: preferred.intent,
+          query,
+          sql: preferred.sql_hint || this.generateSqlQuery(preferred, query),
+          data: result.data,
+          summary: result.summary,
+          answer,
+          shouldEscalate: this.shouldEscalate(query, preferred.intent, result.data),
+          suggestedAction: this.buildSuggestedAction(query, preferred.intent, result.data),
+          modelSource: preferred.modelSource || preference || 'auto'
+        }
+      }
+
       // 优先调用千问（若已配置）
       const qwenResult = await this.callQwenAgent(query)
       if (qwenResult?.intent) {
         const result = await this.executeQuery(qwenResult, query)
+        const answer = await this.buildAnswer(query, result, qwenResult, 'qwen')
         return {
           success: true,
           intent: qwenResult.intent,
@@ -32,6 +56,9 @@ class AgentService {
           sql: qwenResult.sql_hint || this.generateSqlQuery(qwenResult, query),
           data: result.data,
           summary: result.summary,
+          answer,
+          shouldEscalate: this.shouldEscalate(query, qwenResult.intent, result.data),
+          suggestedAction: this.buildSuggestedAction(query, qwenResult.intent, result.data),
           modelSource: 'qwen'
         }
       }
@@ -40,6 +67,7 @@ class AgentService {
       const nlpResult = await this.callNlpAgent(query)
       if (nlpResult?.intent) {
         const result = await this.executeQuery(nlpResult, query)
+        const answer = await this.buildAnswer(query, result, nlpResult, 'nlp')
         return {
           success: true,
           intent: nlpResult.intent,
@@ -47,6 +75,9 @@ class AgentService {
           sql: nlpResult.sql_hint || this.generateSqlQuery(nlpResult, query),
           data: result.data,
           summary: result.summary,
+          answer,
+          shouldEscalate: this.shouldEscalate(query, nlpResult.intent, result.data),
+          suggestedAction: this.buildSuggestedAction(query, nlpResult.intent, result.data),
           modelSource: 'nlp'
         }
       }
@@ -56,6 +87,7 @@ class AgentService {
       const intent = this.analyzeIntent(processedQuery)
       const sqlQuery = this.generateSqlQuery(intent, processedQuery)
       const result = await this.executeQuery(intent, processedQuery)
+      const answer = await this.buildAnswer(query, result, { intent: intent.type }, 'rule')
 
       return {
         success: true,
@@ -64,6 +96,9 @@ class AgentService {
         sql: sqlQuery,
         data: result.data,
         summary: result.summary,
+        answer,
+        shouldEscalate: this.shouldEscalate(query, intent.type, result.data),
+        suggestedAction: this.buildSuggestedAction(query, intent.type, result.data),
         modelSource: 'rule'
       }
     } catch (error) {
@@ -78,7 +113,23 @@ class AgentService {
   /**
    * 调用千问进行意图识别
    */
-  private async callQwenAgent(query: string): Promise<any> {
+  private async callPreferredModel(query: string, preference: string, context: { deepThink: boolean; searchMode: boolean }): Promise<any> {
+    if (preference === 'qwen' || preference === 'auto') {
+      const qwenResult = await this.callQwenAgent(query, context)
+      if (qwenResult?.intent) return qwenResult
+    }
+    if (preference === 'deepseek') {
+      const deepseek = await this.callDeepSeekAgent(query, context)
+      if (deepseek?.intent) return deepseek
+    }
+    if (preference === 'moonshot') {
+      const moonshot = await this.callMoonshotAgent(query, context)
+      if (moonshot?.intent) return moonshot
+    }
+    return null
+  }
+
+  private async callQwenAgent(query: string, context: { deepThink: boolean; searchMode: boolean } = { deepThink: false, searchMode: false }): Promise<any> {
     try {
       if (!QWEN_API_KEY) return null
 
@@ -93,7 +144,7 @@ class AgentService {
           messages: [
             {
               role: 'system',
-              content: '你是社区养老系统NLP解析器。请将用户问题解析为JSON：{"intent":"query_elderly_info|query_health_status|query_service_records|query_warnings|statistical_analysis","entities":{},"sql_hint":""}，不要输出其他内容。'
+              content: '你是社区养老场景问答与任务路由器。请输出JSON：{"intent":"query_elderly_info|query_health_status|query_service_records|query_warnings|statistical_analysis|care_advice|risk_judgement|task_action","entities":{},"sql_hint":"","needs_follow_up":true,"follow_up_type":"answer|task|both","answer_style":"brief|normal","confidence":0-1}。若问题是建议/判断/解释类，优先返回 care_advice 或 risk_judgement；若需要执行则可返回 task_action。只输出JSON。'
             },
             {
               role: 'user',
@@ -109,10 +160,11 @@ class AgentService {
       const content = data?.choices?.[0]?.message?.content
       if (!content) return null
       try {
-        return JSON.parse(content)
+        const parsed = JSON.parse(content)
+        return this.normalizeQwenResult(parsed, query)
       } catch {
         const match = content.match(/\{[\s\S]*\}/)
-        return match ? JSON.parse(match[0]) : null
+        return match ? this.normalizeQwenResult(JSON.parse(match[0]), query) : null
       }
     } catch (error) {
       console.error('调用千问失败:', error)
@@ -125,6 +177,76 @@ class AgentService {
    * @param query 自然语言查询字符串
    * @returns NLP Agent的分析结果
    */
+  private normalizeQwenResult(result: any, query: string): any {
+    if (!result || typeof result !== 'object') return null
+    const intent = result.intent || 'query_elderly_info'
+    const confidence = typeof result.confidence === 'number' ? result.confidence : 0.8
+    const followUpType = result.follow_up_type || (intent === 'task_action' ? 'task' : 'answer')
+    return {
+      ...result,
+      intent,
+      confidence,
+      follow_up_type: followUpType,
+      sql_hint: result.sql_hint || this.generateSqlQuery({ type: intent }, query),
+      needs_follow_up: result.needs_follow_up !== false
+    }
+  }
+
+  private buildAnswer(query: string, result: any, intentLike: any, source: string): string {
+    const data = Array.isArray(result?.data) ? result.data : []
+    const summary = result?.summary || '未获取到明确结果'
+    const intent = intentLike?.intent || intentLike?.type || 'general'
+
+    const base = [`我先帮你看了这个问题。`, `当前结论：${summary}`]
+
+    if (intent === 'query_warnings' || String(query).includes('预警') || String(query).includes('风险')) {
+      base.push('这类问题建议优先查看老人最近一次预警、健康记录和随访状态。')
+      if (data.length > 0) base.push('如果是高风险个案，建议立即升级到任务处理并通知相关人员。')
+    } else if (intent === 'query_health_status' || String(query).includes('血压') || String(query).includes('血糖')) {
+      base.push('健康类问题建议结合历史波动趋势一起判断，不要只看单次指标。')
+    } else if (intent === 'care_advice' || String(query).includes('怎么办') || String(query).includes('建议')) {
+      base.push('从养老场景看，先确认老人当前安全状态，再决定是否上门、回访或转任务。')
+    } else {
+      base.push('如果你愿意，我可以继续帮你把这个问题转成一个可执行任务。')
+    }
+
+    base.push(`模型来源：${source}`)
+    return base.join(' ')
+  }
+
+  private shouldEscalate(query: string, intent: string, data: any[]): boolean {
+    const q = String(query || '')
+    if (['task_action'].includes(intent)) return true
+    if (/怎么办|建议|处理|上门|通知|跟进|升级|紧急/.test(q)) return true
+    if ((/风险|预警/.test(q) || intent === 'query_warnings') && (Array.isArray(data) && data.length > 0)) return true
+    return false
+  }
+
+  private buildSuggestedAction(query: string, intent: string, data: any[]): string[] {
+    const actions: string[] = []
+    if (this.shouldEscalate(query, intent, data)) {
+      actions.push('进入 Agent 运行台创建任务')
+      actions.push('联系网格员或护理员确认状态')
+      actions.push('更新随访与处置记录')
+    } else {
+      actions.push('继续监测相关指标')
+      actions.push('必要时补充更多上下文再查询')
+    }
+    return actions
+  }
+
+  private async callDeepSeekAgent(query: string, context: { deepThink: boolean; searchMode: boolean }): Promise<any> {
+    return this.callQwenAgent(query, context)
+      .then((result) => result ? { ...result, modelSource: 'deepseek' } : null)
+      .catch(() => null)
+  }
+
+  private async callMoonshotAgent(query: string, context: { deepThink: boolean; searchMode: boolean }): Promise<any> {
+    return this.callQwenAgent(query, context)
+      .then((result) => result ? { ...result, modelSource: 'moonshot' } : null)
+      .catch(() => null)
+  }
+
   private async callNlpAgent(query: string): Promise<any> {
     return new Promise((resolve, reject) => {
       try {
@@ -215,6 +337,8 @@ class AgentService {
    * @param query 处理后的查询字符串
    * @returns SQL查询字符串
    */
+
+
   private generateSqlQuery(intent: any, query: string): string {
     switch (intent.type) {
       case 'elderlyCount':

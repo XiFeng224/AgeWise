@@ -18,13 +18,105 @@ interface PlannerOutput {
   toolCalls: ToolCall[]
 }
 
+type PolicyByMode = Record<StrategyMode, { followUpMinutes: number; escalationMultiplier: number }>
+
+const DEFAULT_POLICY_BY_MODE: PolicyByMode = {
+  conservative: { followUpMinutes: 20, escalationMultiplier: 1.2 },
+  balanced: { followUpMinutes: 30, escalationMultiplier: 1 },
+  aggressive: { followUpMinutes: 45, escalationMultiplier: 0.9 }
+}
+
 class AgentVNextService {
-  private policyByMode: Record<StrategyMode, { followUpMinutes: number; escalationMultiplier: number }> = {
-    conservative: { followUpMinutes: 20, escalationMultiplier: 1.2 },
-    balanced: { followUpMinutes: 30, escalationMultiplier: 1 },
-    aggressive: { followUpMinutes: 45, escalationMultiplier: 0.9 }
-  }
+  private policyByMode: PolicyByMode = { ...DEFAULT_POLICY_BY_MODE }
   private policyLoaded = false
+  private planCache = new Map<string, { expireAt: number; value: any }>()
+
+  private readonly supportedTools: ToolName[] = ['create_dispatch', 'resolve_warning', 'notify_family', 'append_timeline']
+
+  private clamp(value: number, min: number, max: number) {
+    return Math.max(min, Math.min(max, value))
+  }
+
+  private safeParseJSON<T>(value: string | null | undefined): T | null {
+    if (!value) return null
+    try {
+      return JSON.parse(value) as T
+    } catch {
+      return null
+    }
+  }
+
+  private normalizePolicy(input: unknown): PolicyByMode {
+    const base: PolicyByMode = { ...DEFAULT_POLICY_BY_MODE }
+    const source = (input && typeof input === 'object') ? (input as Partial<PolicyByMode>) : {}
+
+    ;(['conservative', 'balanced', 'aggressive'] as StrategyMode[]).forEach((mode) => {
+      const row = source[mode]
+      if (!row) return
+
+      const followUpMinutes = Number(row.followUpMinutes)
+      const escalationMultiplier = Number(row.escalationMultiplier)
+
+      if (Number.isFinite(followUpMinutes)) {
+        base[mode].followUpMinutes = this.clamp(Math.round(followUpMinutes), 5, 180)
+      }
+      if (Number.isFinite(escalationMultiplier)) {
+        base[mode].escalationMultiplier = this.clamp(escalationMultiplier, 0.5, 2)
+      }
+    })
+
+    return base
+  }
+
+  private sanitizeToolCalls(toolCalls: ToolCall[]): ToolCall[] {
+    if (!Array.isArray(toolCalls)) return []
+
+    return toolCalls
+      .filter((c) => c && this.supportedTools.includes(c.tool))
+      .map((c) => ({
+        tool: c.tool,
+        args: (c.args && typeof c.args === 'object') ? c.args : {}
+      }))
+      .slice(0, 8)
+  }
+
+  private buildPlanCacheKey(input: {
+    elderlyId: number
+    eventSummary: string
+    strategyMode?: StrategyMode
+    riskLevel?: 'low' | 'medium' | 'high'
+    module?: '护理' | '医护' | '后勤' | '收费' | '接待'
+  }) {
+    return JSON.stringify({
+      elderlyId: input.elderlyId,
+      eventSummary: (input.eventSummary || '').trim().slice(0, 200),
+      strategyMode: input.strategyMode || 'balanced',
+      riskLevel: input.riskLevel || 'medium',
+      module: input.module || '医护'
+    })
+  }
+
+  private getPlanCache(key: string) {
+    const item = this.planCache.get(key)
+    if (!item) return null
+    if (item.expireAt <= Date.now()) {
+      this.planCache.delete(key)
+      return null
+    }
+    return item.value
+  }
+
+  private setPlanCache(key: string, value: any, ttlMs = 20_000) {
+    this.planCache.set(key, {
+      value,
+      expireAt: Date.now() + ttlMs
+    })
+
+    if (this.planCache.size > 200) {
+      const firstKey = this.planCache.keys().next().value
+      if (firstKey) this.planCache.delete(firstKey)
+    }
+  }
 
   private async ensurePolicyLoaded() {
     if (this.policyLoaded) return
@@ -34,15 +126,9 @@ class AgentVNextService {
       order: [['createdAt', 'DESC']]
     })
 
-    if (latest?.content) {
-      try {
-        const parsed = JSON.parse(latest.content)
-        if (parsed?.policyByMode) {
-          this.policyByMode = parsed.policyByMode
-        }
-      } catch {
-        // ignore invalid snapshot
-      }
+    const parsed = this.safeParseJSON<{ note?: string; policyByMode?: PolicyByMode }>(latest?.content)
+    if (parsed?.policyByMode) {
+      this.policyByMode = this.normalizePolicy(parsed.policyByMode)
     }
 
     this.policyLoaded = true
@@ -127,7 +213,11 @@ class AgentVNextService {
   }
 
   private async findReferenceCases(elderlyId: number, eventSummary: string) {
-    const keyword = (eventSummary || '').slice(0, 20)
+    const keyword = (eventSummary || '').trim().slice(0, 20)
+    if (!keyword) {
+      return { warnings: [], serviceRequests: [], serviceRecords: [] }
+    }
+
     const like = `%${keyword}%`
 
     const [warnings, serviceRequests, serviceRecords] = await Promise.all([
@@ -190,6 +280,11 @@ class AgentVNextService {
     }
   }
 
+  async answerQuestion(input: { question: string; context?: Record<string, any> }) {
+    const answer = await aiAgentService.answer(input)
+    return answer
+  }
+
   async planTask(input: {
     elderlyId: number
     eventSummary: string
@@ -198,6 +293,16 @@ class AgentVNextService {
     module?: '护理' | '医护' | '后勤' | '收费' | '接待'
   }) {
     await this.ensurePolicyLoaded()
+
+    const cacheKey = this.buildPlanCacheKey(input)
+    const cached = this.getPlanCache(cacheKey)
+    if (cached) {
+      return {
+        ...cached,
+        cache: { hit: true }
+      }
+    }
+
     const strategyMode = input.strategyMode || 'balanced'
     const context = await this.getContextSnapshot(input.elderlyId)
     const references = await this.findReferenceCases(input.elderlyId, input.eventSummary)
@@ -213,29 +318,41 @@ class AgentVNextService {
       .slice(0, 5)
       .map((p: any) => p.name)
 
-    const decision = await aiAgentService.fullDecision({
-      triageInput: {
-        elderlyName: context.profile.name,
-        age: context.profile.age,
-        metrics: context.metrics24h,
-        historySummary: context.profile.notes || '暂无病史摘要'
-      },
-      dispatchInput: {
-        riskLevel: risk,
-        module,
-        shift: duty.shift as '白班' | '晚班' | '夜班',
-        availableRoles,
-        eventSummary: input.eventSummary
-      },
-      copilotQuestion: '请给出步骤化执行计划（10分钟、30分钟、2小时、24小时），并输出重点行动。',
-      context: {
-        strategyMode,
-        profile: context.profile,
-        warnings: context.warningHistory.slice(0, 5),
-        providers: availableRoles,
-        references
+    let decision: any
+    try {
+      decision = await aiAgentService.fullDecision({
+        triageInput: {
+          elderlyName: context.profile.name,
+          age: context.profile.age,
+          metrics: context.metrics24h,
+          historySummary: context.profile.notes || '暂无病史摘要'
+        },
+        dispatchInput: {
+          riskLevel: risk,
+          module,
+          shift: duty.shift as '白班' | '晚班' | '夜班',
+          availableRoles,
+          eventSummary: input.eventSummary
+        },
+        copilotQuestion: '请给出步骤化执行计划（10分钟、30分钟、2小时、24小时），并输出重点行动。',
+        context: {
+          strategyMode,
+          profile: context.profile,
+          warnings: context.warningHistory.slice(0, 5),
+          providers: availableRoles,
+          references
+        }
+      })
+    } catch {
+      decision = {
+        triage: { actions: ['先完成关键体征复测并评估风险等级'] },
+        dispatch: { steps: ['安排值班人员执行首轮处置', '2小时内完成复测复核'] },
+        copilot: {
+          summary: '模型服务暂时不可用，已给出规则化兜底处置建议。',
+          communication: '已启动基础处置流程，请保持电话畅通。'
+        }
       }
-    })
+    }
 
     const reactSteps: Array<{ reason: string; action: string; observation: string }> = [
       {
@@ -317,7 +434,9 @@ class AgentVNextService {
       ]
     }
 
-    return {
+    planner.toolCalls = this.sanitizeToolCalls(planner.toolCalls)
+
+    const result = {
       strategyMode,
       context,
       decision,
@@ -328,18 +447,26 @@ class AgentVNextService {
         eventSummary: input.eventSummary,
         steps: planner.timeline.map(t => `${t.window}:${t.actions.join('；')}`),
         toolCalls: planner.toolCalls
-      }
+      },
+      cache: { hit: false }
     }
+
+    this.setPlanCache(cacheKey, result)
+    return result
   }
 
   async executeTools(calls: ToolCall[]) {
+    const validCalls = this.sanitizeToolCalls(calls)
     const results: Array<{ tool: ToolName; success: boolean; result?: any; error?: string }> = []
 
-    for (const call of calls) {
+    for (const call of validCalls) {
       try {
         if (call.tool === 'create_dispatch') {
+          const elderlyId = Number(call.args.elderlyId)
+          if (!Number.isFinite(elderlyId)) throw new Error('elderlyId无效')
+
           const data = await agentOrchestratorService.quickDispatchFromElderly({
-            elderlyId: Number(call.args.elderlyId),
+            elderlyId,
             requestType: call.args.requestType || 'AI自动派单',
             priority: call.args.priority || 'medium',
             description: call.args.description || '由Agent工具调用创建',
@@ -350,13 +477,19 @@ class AgentVNextService {
         }
 
         if (call.tool === 'resolve_warning') {
-          const data = await agentOrchestratorService.resolveWarning(Number(call.args.warningId))
+          const warningId = Number(call.args.warningId)
+          if (!Number.isFinite(warningId)) throw new Error('warningId无效')
+
+          const data = await agentOrchestratorService.resolveWarning(warningId)
           results.push({ tool: call.tool, success: true, result: data })
           continue
         }
 
         if (call.tool === 'notify_family') {
-          const elderly = await Elderly.findByPk(Number(call.args.elderlyId))
+          const elderlyId = Number(call.args.elderlyId)
+          if (!Number.isFinite(elderlyId)) throw new Error('elderlyId无效')
+
+          const elderly = await Elderly.findByPk(elderlyId)
           if (!elderly) throw new Error('老人不存在')
 
           const receivers = await User.findAll({ where: { role: { [Op.in]: ['admin', 'manager', 'grid'] } }, attributes: ['id'] })
@@ -375,7 +508,10 @@ class AgentVNextService {
         }
 
         if (call.tool === 'append_timeline') {
-          const elderly = await Elderly.findByPk(Number(call.args.elderlyId))
+          const elderlyId = Number(call.args.elderlyId)
+          if (!Number.isFinite(elderlyId)) throw new Error('elderlyId无效')
+
+          const elderly = await Elderly.findByPk(elderlyId)
           if (!elderly) throw new Error('老人不存在')
 
           const admins = await User.findAll({ where: { role: { [Op.in]: ['admin', 'manager'] } }, attributes: ['id'] })
@@ -488,13 +624,7 @@ class AgentVNextService {
       limit: 1000
     })
 
-    const parsed = rows.map((r: any) => {
-      try {
-        return JSON.parse(r.notes || '{}')
-      } catch {
-        return {}
-      }
-    })
+    const parsed = rows.map((r: any) => this.safeParseJSON<any>(r.notes || '{}') || {})
 
     const count = parsed.length || 1
     const overdueRate = parsed.filter((p: any) => p.isOverdue).length / count
@@ -509,6 +639,7 @@ class AgentVNextService {
       this.policyByMode.aggressive.followUpMinutes = 50
     }
 
+    this.policyByMode = this.normalizePolicy(this.policyByMode)
     await this.persistPolicySnapshot('weekly_update')
 
     return {

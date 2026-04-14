@@ -11,6 +11,7 @@ import {
   Tag,
   Tooltip
 } from 'antd'
+import { useNavigate } from 'react-router-dom'
 import { 
   BellOutlined, 
   CheckCircleOutlined, 
@@ -24,6 +25,7 @@ import axios from '../utils/axiosInstance'
 const { confirm } = Modal
 
 const Notifications: React.FC = () => {
+  const navigate = useNavigate()
   const [notifications, setNotifications] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
@@ -159,13 +161,17 @@ const Notifications: React.FC = () => {
           </Space>
         } 
         extra={
-          <Button 
-            type="primary" 
-            onClick={markAllAsRead}
-            disabled={unreadCount === 0}
-          >
-            全部标记为已读
-          </Button>
+          <Space>
+            <Button onClick={() => navigate('/agent/command')}>去指挥中心</Button>
+            <Button onClick={() => navigate('/agent/vnext')}>去运行台</Button>
+            <Button 
+              type="primary" 
+              onClick={markAllAsRead}
+              disabled={unreadCount === 0}
+            >
+              全部标记为已读
+            </Button>
+          </Space>
         }
       >
         <Spin spinning={loading}>

@@ -13,13 +13,14 @@ import {
   Typography,
   Alert,
   Tag,
-  AutoComplete,
   Select,
   DatePicker,
   Form,
-  Progress
+  Progress,
+  Switch
 } from 'antd'
-import { SearchOutlined, ClearOutlined, ExportOutlined, FilterOutlined } from '@ant-design/icons'
+import { SendOutlined, ClearOutlined, ExportOutlined, FilterOutlined, RocketOutlined } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
 import axios from '../utils/axiosInstance'
 
 const { TextArea } = Input
@@ -48,19 +49,29 @@ interface Explainability {
 }
 
 const DataQuery: React.FC = () => {
+  const navigate = useNavigate()
   const [queryText, setQueryText] = useState('')
   const [sqlQuery, setSqlQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<QueryResult[]>([])
   const [queryHistory, setQueryHistory] = useState<string[]>([])
+  const [recentSessions, setRecentSessions] = useState<Array<{ query: string; answer: string; traceId: string; escalate: boolean }>>([])
 
-  const [suggestions, setSuggestions] = useState<string[]>([])
   const [summary, setSummary] = useState<string>('')
+  const [suggestions, setSuggestions] = useState<string[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [explainability, setExplainability] = useState<Explainability | null>(null)
   const [responseMode, setResponseMode] = useState<'demo' | 'live' | ''>('')
-  const [modelSource, setModelSource] = useState<'qwen' | 'nlp' | 'rule' | ''>('')
+  const [modelSource, setModelSource] = useState<'qwen' | 'nlp' | 'rule' | 'deepseek' | 'moonshot' | ''>('')
   const [latencyMs, setLatencyMs] = useState<number>(0)
+  const [answer, setAnswer] = useState<string>('')
+  const [shouldEscalate, setShouldEscalate] = useState(false)
+  const [suggestedActions, setSuggestedActions] = useState<string[]>([])
+  const [recentAnswer, setRecentAnswer] = useState<string>('')
+  const [recentTrace, setRecentTrace] = useState<string>('')
+  const [deepThink, setDeepThink] = useState(true)
+  const [searchMode, setSearchMode] = useState(true)
+  const [modelPreference, setModelPreference] = useState<'auto' | 'qwen' | 'deepseek' | 'moonshot' | 'nlp' | 'rule'>('auto')
 
   // 高级搜索条件
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -108,7 +119,10 @@ const DataQuery: React.FC = () => {
     try {
       // 调用Agent服务进行自然语言解析
       const response = await axios.post('/query/natural', {
-        query: queryText
+        query: queryText,
+        modelPreference,
+        deepThink,
+        searchMode
       })
 
       if (response.data.success) {
@@ -119,6 +133,22 @@ const DataQuery: React.FC = () => {
         setResponseMode(response.data.mode || '')
         setModelSource(response.data.modelSource || '')
         setLatencyMs(Number(response.data.latencyMs || 0))
+        setAnswer(response.data.answer || '')
+        setShouldEscalate(Boolean(response.data.shouldEscalate))
+        setSuggestedActions(Array.isArray(response.data.suggestedAction) ? response.data.suggestedAction : [])
+        setRecentAnswer(response.data.answer || response.data.summary || '')
+        setRecentTrace(response.data.traceId || '')
+        const sessionSnapshot = {
+          query: queryText,
+          answer: response.data.answer || response.data.summary || '',
+          traceId: response.data.traceId || '',
+          escalate: Boolean(response.data.shouldEscalate)
+        }
+        localStorage.setItem('agent_query_context', JSON.stringify({
+          ...sessionSnapshot,
+          suggestedAction: Array.isArray(response.data.suggestedAction) ? response.data.suggestedAction : []
+        }))
+        setRecentSessions((prev) => [sessionSnapshot, ...prev].slice(0, 3))
         
         // 保存查询历史
         setQueryHistory((prev: string[]) => [queryText, ...prev.slice(0, 4)])
@@ -218,6 +248,7 @@ const DataQuery: React.FC = () => {
     setSqlQuery(fallbackSql)
     setResults(mockResults)
     setQueryHistory(prev => [text, ...prev.slice(0, 4)])
+    setRecentSessions(prev => [{ query: text, answer: '本地兜底结果已生成', traceId: '', escalate: false }, ...prev].slice(0, 3))
   }
 
   // 降级高级搜索处理
@@ -300,6 +331,11 @@ const DataQuery: React.FC = () => {
     setExplainability(null)
     setResponseMode('')
     setModelSource('')
+    setAnswer('')
+    setRecentAnswer('')
+    setRecentTrace('')
+    setShouldEscalate(false)
+    setSuggestedActions([])
     setAdvancedFilters({
       ageRange: null,
       gender: '',
@@ -368,15 +404,42 @@ const DataQuery: React.FC = () => {
       <Title level={2}>智能数据查询</Title>
       
       <Alert
-        message="提示：支持自然语言查询，如'查询80岁以上独居老人'或'高血压老人未复诊名单'"
-        description="比赛演示建议：先查风险，再展示AI解释与处置建议，形成完整闭环。"
+        message="提示：支持问答优先的自然语言查询，如'张大爷血压高怎么办'或'80岁以上独居老人有哪些'"
+        description="系统会先给出回答，再判断是否需要升级为任务处理。"
         type="info"
         style={{ marginBottom: '16px' }}
       />
 
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col xs={24} lg={16}>
+          <Card style={{ borderRadius: 16, background: 'linear-gradient(135deg, #f6f9fc 0%, #ffffff 100%)' }}>
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <Space wrap>
+                <Tag color="processing">Agent 问答入口</Tag>
+                <Tag color="blue">先回答</Tag>
+                <Tag color="gold">再判断</Tag>
+                <Tag color="green">再升级</Tag>
+              </Space>
+              <Title level={4} style={{ margin: 0 }}>面向养老场景的问题理解与任务路由</Title>
+              <Text type="secondary">这不是普通搜索框，而是一个会先回答、再决定是否升级为任务的智能体入口。</Text>
+            </Space>
+          </Card>
+        </Col>
+        <Col xs={24} lg={8}>
+          <Card title="最近问答 / 任务状态" style={{ borderRadius: 16 }}>
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <Text strong>最近问答</Text>
+              <Text type="secondary">{recentAnswer || '暂无'}</Text>
+              <Text strong>最近 traceId</Text>
+              <Text type="secondary">{recentTrace || '暂无'}</Text>
+            </Space>
+          </Card>
+        </Col>
+      </Row>
+
       <Row gutter={[16, 16]}>
         <Col span={24}>
-          <Card title="自然语言查询" extra={
+          <Card title="对话式问答" extra={
             <Space>
               <Button 
                 icon={<FilterOutlined />} 
@@ -393,27 +456,52 @@ const DataQuery: React.FC = () => {
               </Button>
               <Button 
                 type="primary" 
-                icon={<SearchOutlined />} 
+                icon={<SendOutlined />} 
                 onClick={handleNaturalLanguageQuery}
                 loading={loading}
               >
-                查询
+                发送
               </Button>
             </Space>
           }>
-            <AutoComplete
-              options={suggestions.map(suggestion => ({ value: suggestion }))}
-              onSelect={(value) => setQueryText(value)}
-              onSearch={handleGetSuggestions}
-              style={{ width: '100%', marginBottom: '16px' }}
-            >
-              <TextArea
-                value={queryText}
-                onChange={(e) => setQueryText(e.target.value)}
-                placeholder="请输入自然语言查询，例如：查询80岁以上独居老人数量"
-                autoSize={{ minRows: 2, maxRows: 4 }}
-              />
-            </AutoComplete>
+            <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Space wrap>
+                <Tag color="processing">对话模式</Tag>
+                <Text type="secondary">像 Chat 一样提问，系统先回答，再决定是否升级任务</Text>
+              </Space>
+              <Space>
+                <Text>深度思考</Text>
+                <Switch checked={deepThink} onChange={setDeepThink} />
+                <Text>智能搜索</Text>
+                <Switch checked={searchMode} onChange={setSearchMode} />
+              </Space>
+            </div>
+            <Row gutter={12} style={{ marginBottom: 12 }}>
+              <Col xs={24} md={8}>
+                <Select
+                  value={modelPreference}
+                  onChange={setModelPreference}
+                  style={{ width: '100%' }}
+                  options={[
+                    { label: '自动选择', value: 'auto' },
+                    { label: '千问', value: 'qwen' },
+                    { label: 'DeepSeek', value: 'deepseek' },
+                    { label: 'Moonshot', value: 'moonshot' },
+                    { label: 'NLP Agent', value: 'nlp' },
+                    { label: '规则兜底', value: 'rule' }
+                  ]}
+                />
+              </Col>
+              <Col xs={24} md={16}>
+                <Input.TextArea
+                  value={queryText}
+                  onChange={(e) => setQueryText(e.target.value)}
+                  placeholder="输入你的问题，比如：张大爷血压高怎么办？"
+                  autoSize={{ minRows: 2, maxRows: 4 }}
+                  style={{ borderRadius: 16 }}
+                />
+              </Col>
+            </Row>
             
             {/* 高级搜索 */}
             {showAdvanced && (
@@ -505,20 +593,36 @@ const DataQuery: React.FC = () => {
             )}
             
             {/* 查询历史 */}
-            {queryHistory.length > 0 && (
+            {(recentSessions.length > 0 || queryHistory.length > 0) && (
               <div style={{ marginTop: '16px' }}>
-                <Text strong>最近查询：</Text>
-                <Space wrap style={{ marginTop: '8px' }}>
-                  {queryHistory.map((history, index) => (
-                    <Tag 
-                      key={index} 
-                      color="blue" 
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => setQueryText(history)}
-                    >
-                      {history}
-                    </Tag>
+                <Text strong>最近会话：</Text>
+                <Space direction="vertical" style={{ width: '100%', marginTop: '8px' }}>
+                  {recentSessions.map((session, index) => (
+                    <Card key={`${session.traceId || index}`} size="small" style={{ borderRadius: 14 }}>
+                      <Space direction="vertical" style={{ width: '100%' }}>
+                        <Space wrap>
+                          <Tag color={session.escalate ? 'warning' : 'success'}>{session.escalate ? '已升级任务' : '已回答'}</Tag>
+                          {session.traceId ? <Tag color="blue">traceId: {session.traceId}</Tag> : null}
+                        </Space>
+                        <Text strong>{session.query}</Text>
+                        <Text type="secondary">{session.answer}</Text>
+                      </Space>
+                    </Card>
                   ))}
+                  {queryHistory.length > 0 && (
+                    <Space wrap>
+                      {queryHistory.map((history, index) => (
+                        <Tag 
+                          key={index} 
+                          color="blue" 
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => setQueryText(history)}
+                        >
+                          {history}
+                        </Tag>
+                      ))}
+                    </Space>
+                  )}
                 </Space>
               </div>
             )}
@@ -551,16 +655,44 @@ const DataQuery: React.FC = () => {
 
         <Col span={24}>
           <Card title={`查询结果 (${results.length} 条记录)`}>
-            {summary && (
+            {answer && (
+              <Card size="small" style={{ marginBottom: '16px', borderRadius: 16, background: 'linear-gradient(135deg, #fbfcfd 0%, #eef2f6 100%)' }}>
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Space wrap>
+                    <Tag color="processing">智能回答</Tag>
+                    <Tag color={shouldEscalate ? 'warning' : 'success'}>{shouldEscalate ? '建议升级任务' : '可直接回答'}</Tag>
+                    {recentTrace ? <Tag color="blue">traceId: {recentTrace}</Tag> : null}
+                  </Space>
+                  <div style={{ lineHeight: 1.85 }}>{answer}</div>
+                  <Text type="secondary">{responseMode ? `当前数据模式：${responseMode === 'demo' ? '演示模式' : '实时模式'}` : ''}{modelSource ? ` ｜ 模型来源：${modelSource === 'qwen' ? '千问' : modelSource === 'nlp' ? 'NLP Agent' : modelSource === 'deepseek' ? 'DeepSeek' : modelSource === 'moonshot' ? 'Moonshot' : '规则引擎'}` : ''}{latencyMs ? ` ｜ 响应耗时：${latencyMs}ms` : ''}</Text>
+                  <Space wrap>
+                    <Button type="primary" icon={<RocketOutlined />} onClick={() => navigate('/agent/vnext')}>
+                      进入运行台处理
+                    </Button>
+                  </Space>
+                </Space>
+              </Card>
+            )}
+
+            {shouldEscalate && (
               <Alert
-                message={summary}
-                description={
-                  `${responseMode ? `当前数据模式：${responseMode === 'demo' ? '演示模式' : '实时模式'}` : ''}` +
-                  `${modelSource ? ` | 模型来源：${modelSource === 'qwen' ? '千问' : modelSource === 'nlp' ? 'NLP Agent' : '规则引擎'}` : ''}` +
-                  `${latencyMs ? ` | 响应耗时：${latencyMs}ms` : ''}`
-                }
-                type="success"
+                type="warning"
+                showIcon
                 style={{ marginBottom: '16px' }}
+                message="这类问题建议继续升级处理"
+                description={
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <div>{`建议动作：${suggestedActions.join('；') || '建议进一步追问或创建任务'}`}</div>
+                    <Space wrap>
+                      <Button type="primary" icon={<RocketOutlined />} onClick={() => navigate('/agent/vnext')}>
+                        去运行台创建任务
+                      </Button>
+                      <Button onClick={() => navigate('/agent/command')}>
+                        去指挥中心跟踪
+                      </Button>
+                    </Space>
+                  </Space>
+                }
               />
             )}
 

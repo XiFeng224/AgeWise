@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Table,
   Button,
@@ -23,6 +24,7 @@ const { TextArea: AntTextArea } = Input
 const { Text } = Typography
 
 const HealthRecords: React.FC = () => {
+  const navigate = useNavigate()
   const [healthRecords, setHealthRecords] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [visible, setVisible] = useState(false)
@@ -259,7 +261,7 @@ const HealthRecords: React.FC = () => {
     <div style={{ padding: '20px', fontSize: `${fontScale}rem` }}>
       <Card
         title="实时健康监测（简易录入）"
-        extra={<Space><Text>适老大字模式</Text><Switch checked={seniorMode} onChange={setSeniorMode} /></Space>}
+        extra={<Space><Button onClick={() => navigate('/query')}>去智能问答</Button><Button onClick={() => navigate('/agent/vnext')}>去运行台</Button><Text>适老大字模式</Text><Switch checked={seniorMode} onChange={setSeniorMode} /></Space>}
         style={{ marginBottom: 16 }}
       >
         <Alert

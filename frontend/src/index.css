@@ -1,0 +1,133 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --green-1: #f4fbf6;
+  --green-2: #e8f8ec;
+  --green-3: #d5f1de;
+  --green-4: #7dcf95;
+  --green-5: #49b86f;
+  --green-6: #2e9f57;
+  --text-main: #1f2d24;
+  --text-sub: #5f7a68;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--text-main);
+  background: radial-gradient(1200px 600px at -10% -20%, #ffffff 0%, var(--green-1) 55%, #eef8f1 100%);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.ant-layout {
+  min-height: 100vh;
+  background: transparent !important;
+}
+
+.ant-layout-header {
+  border-bottom: 1px solid #e3f2e8;
+}
+
+.ant-layout-content {
+  background: rgba(255, 255, 255, 0.88) !important;
+  border: 1px solid #e5f4ea;
+  box-shadow: 0 10px 30px rgba(46, 159, 87, 0.08);
+  backdrop-filter: blur(2px);
+}
+
+.ant-card {
+  border-radius: 14px !important;
+  border-color: #e6f4ea !important;
+  box-shadow: 0 8px 20px rgba(79, 173, 108, 0.06);
+}
+
+.ant-card-head {
+  border-bottom-color: #ecf7ef !important;
+}
+
+.ant-btn-primary {
+  background: linear-gradient(135deg, var(--green-5), var(--green-6)) !important;
+  border-color: var(--green-6) !important;
+  box-shadow: 0 6px 14px rgba(46, 159, 87, 0.25);
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+  background: linear-gradient(135deg, #58c17b, #39ad64) !important;
+  border-color: #39ad64 !important;
+}
+
+.ant-tag-blue {
+  background: #e8f7ed !important;
+  color: #2a8f50 !important;
+  border-color: #bde7ca !important;
+}
+
+.ant-statistic-content {
+  color: #2b7f4b;
+}
+
+.ant-menu-dark {
+  background: linear-gradient(180deg, #1f8a4a 0%, #166f3a 100%) !important;
+}
+
+.ant-menu-dark .ant-menu-item-selected {
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+.ant-alert-info {
+  background: #edf9f1 !important;
+  border-color: #caecd6 !important;
+}
+
+.ant-table-wrapper .ant-table {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ant-table-thead > tr > th {
+  background: #f0faf3 !important;
+  color: #2f6d48 !important;
+}
+
+.chat-bubble {
+  max-width: 70%;
+  padding: 12px 16px;
+  border-radius: 18px;
+  margin: 8px 0;
+  word-wrap: break-word;
+}
+
+.chat-bubble.user {
+  background-color: var(--green-6);
+  color: white;
+  margin-left: auto;
+}
+
+.chat-bubble.assistant {
+  background-color: #eef8f2;
+  color: #294637;
+  margin-right: auto;
+}
+
+.risk-level-low {
+  color: #2f9e5a;
+}
+
+.risk-level-medium {
+  color: #d38b1e;
+}
+
+.risk-level-high {
+  color: #d43832;
+}

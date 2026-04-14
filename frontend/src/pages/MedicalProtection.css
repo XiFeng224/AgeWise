@@ -1,0 +1,289 @@
+/* 医疗防护视频页面样式 */
+
+/* 主容器 */
+.medical-protection-content {
+  padding: 24px;
+  background: #f5f7fa;
+  min-height: calc(100vh - 64px);
+}
+
+/* 页面头部 */
+.medical-protection-header {
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.medical-protection-title {
+  color: #1890ff;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.medical-protection-description {
+  color: #666;
+  font-size: 16px;
+}
+
+/* 筛选区域 */
+.medical-protection-filters {
+  margin-bottom: 32px;
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+}
+
+.medical-protection-search,
+.medical-protection-category,
+.medical-protection-tag {
+  width: 100%;
+}
+
+/* 加载状态 */
+.medical-protection-loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  gap: 16px;
+}
+
+.loading-tip {
+  font-size: 16px;
+  color: #666;
+  margin-top: 16px;
+}
+
+/* 空状态 */
+.medical-protection-empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  font-size: 16px;
+  color: #666;
+}
+
+/* 视频列表 */
+.medical-protection-videos {
+  margin-top: 24px;
+}
+
+/* 视频卡片 */
+.medical-protection-video-card {
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.medical-protection-video-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* 视频封面 */
+.video-cover-container {
+  position: relative;
+  height: 180px;
+  overflow: hidden;
+  border-radius: 8px 8px 0 0;
+}
+
+.video-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.medical-protection-video-card:hover .video-cover {
+  transform: scale(1.05);
+}
+
+/* 视频覆盖层 */
+.video-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.medical-protection-video-card:hover .video-overlay {
+  opacity: 1;
+}
+
+/* 播放图标 */
+.play-icon {
+  font-size: 48px;
+  color: white;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  transition: transform 0.3s ease;
+}
+
+.medical-protection-video-card:hover .play-icon {
+  transform: scale(1.1);
+}
+
+/* 视频时长 */
+.video-duration {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* 视频标题 */
+.video-title {
+  margin-bottom: 8px;
+  height: 48px;
+  overflow: hidden;
+}
+
+.video-title strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* 视频信息 */
+.video-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 视频描述 */
+.video-description {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 12px;
+  line-height: 1.4;
+  height: 48px;
+  overflow: hidden;
+}
+
+/* 视频元信息 */
+.video-meta {
+  margin-top: auto;
+}
+
+/* 视频作者 */
+.video-author {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.video-author .meta-icon {
+  font-size: 12px;
+  margin-right: 4px;
+  color: #999;
+}
+
+.video-author Text {
+  font-size: 12px;
+  color: #999;
+}
+
+/* 视频统计 */
+.video-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.video-stat {
+  display: flex;
+  align-items: center;
+}
+
+.video-stat .meta-icon {
+  font-size: 12px;
+  margin-right: 4px;
+  color: #999;
+}
+
+.video-stat Text {
+  font-size: 12px;
+  color: #999;
+}
+
+/* 视频标签 */
+.video-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.video-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: #e6f7ff;
+  color: #1890ff;
+  border-color: #91d5ff;
+}
+
+/* 小字体 */
+.small-text {
+  font-size: 12px;
+  color: #999;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .medical-protection-content {
+    padding: 16px;
+  }
+
+  .medical-protection-filters {
+    padding: 16px;
+  }
+
+  .video-cover-container {
+    height: 140px;
+  }
+
+  .play-icon {
+    font-size: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .video-cover-container {
+    height: 120px;
+  }
+
+  .play-icon {
+    font-size: 28px;
+  }
+
+  .medical-protection-header {
+    margin-bottom: 24px;
+  }
+
+  .medical-protection-title {
+    font-size: 20px;
+  }
+
+  .medical-protection-description {
+    font-size: 14px;
+  }
+}

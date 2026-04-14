@@ -1,0 +1,401 @@
+/* SystemStatus.css - 系统状态页面样式 */
+
+/* 主容器 */
+.system-status {
+  padding: 20px 0;
+}
+
+/* 加载状态 */
+.system-status-loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  gap: 16px;
+}
+
+.loading-tip {
+  font-size: 16px;
+  color: #666;
+  margin-top: 16px;
+}
+
+/* 页面标题 */
+.page-header {
+  margin-bottom: 32px;
+}
+
+.page-title {
+  margin-bottom: 8px !important;
+  color: #333 !important;
+  font-weight: 600 !important;
+  display: flex;
+  align-items: center;
+}
+
+.page-title::before {
+  content: '';
+  width: 4px;
+  height: 20px;
+  background: linear-gradient(180deg, #ff7a45 0%, #fa8c16 100%);
+  border-radius: 2px;
+  margin-right: 12px;
+}
+
+.page-subtitle {
+  font-size: 16px !important;
+  color: #666 !important;
+  margin-left: 16px !important;
+}
+
+/* 概览区域 */
+.overview-section {
+  margin-bottom: 32px;
+}
+
+.overview-card {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.3s ease !important;
+  overflow: hidden;
+}
+
+.overview-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+.card-title {
+  margin-bottom: 20px !important;
+  color: #333 !important;
+  font-weight: 600 !important;
+}
+
+/* 服务状态 */
+.service-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0 !important;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.service-item:last-child {
+  border-bottom: none;
+}
+
+.service-icon {
+  font-size: 20px;
+  margin-right: 16px;
+  color: #ff7a45;
+}
+
+.service-info {
+  flex: 1;
+}
+
+.service-name {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.service-description {
+  font-size: 12px;
+  color: #666;
+}
+
+.service-status {
+  margin-left: 16px;
+}
+
+/* 性能指标 */
+.performance-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.performance-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.performance-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.performance-info {
+  text-align: center;
+}
+
+.performance-value {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  margin-bottom: 4px !important;
+}
+
+.performance-name {
+  font-size: 12px !important;
+  color: #666 !important;
+}
+
+/* 详细指标 */
+.details-section {
+  margin-bottom: 32px;
+}
+
+.detail-card {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.3s ease !important;
+  overflow: hidden;
+  height: 100%;
+}
+
+.detail-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* 资源使用率 */
+.resource-item {
+  margin-bottom: 20px;
+}
+
+.resource-item:last-child {
+  margin-bottom: 0;
+}
+
+.resource-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.resource-header Text {
+  font-size: 14px !important;
+  color: #333 !important;
+}
+
+/* 系统响应 */
+.response-item {
+  margin-bottom: 24px;
+}
+
+.response-item:last-child {
+  margin-bottom: 0;
+}
+
+.response-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.response-header Text {
+  font-size: 14px !important;
+  color: #333 !important;
+}
+
+.response-desc {
+  font-size: 12px !important;
+  color: #666 !important;
+  margin-top: 8px !important;
+}
+
+/* 最近告警 */
+.alert-item {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0 !important;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.alert-item:last-child {
+  border-bottom: none;
+}
+
+.alert-time {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.alert-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.alert-message {
+  font-size: 14px;
+  color: #333;
+  flex: 1;
+  margin-right: 12px;
+}
+
+.view-all-button {
+  margin-top: 16px !important;
+  color: #ff7a45 !important;
+}
+
+/* 操作区域 */
+.action-section {
+  margin-bottom: 20px;
+}
+
+.action-card {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  background: #f5f5f5 !important;
+  border: none !important;
+}
+
+.action-card .card-title {
+  margin-bottom: 16px !important;
+}
+
+/* 按钮样式 */
+.action-card Button {
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+}
+
+.action-card Button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.action-card Button:first-child {
+  background: #ff7a45 !important;
+  border-color: #ff7a45 !important;
+}
+
+.action-card Button:first-child:hover {
+  background: #fa8c16 !important;
+  border-color: #fa8c16 !important;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .page-header {
+    text-align: center;
+  }
+  
+  .page-title {
+    justify-content: center;
+  }
+  
+  .page-subtitle {
+    margin-left: 0 !important;
+  }
+  
+  .overview-section {
+    margin-bottom: 24px;
+  }
+  
+  .details-section {
+    margin-bottom: 24px;
+  }
+  
+  .action-card {
+    text-align: center;
+  }
+  
+  .action-card Space {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .service-item {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px 0 !important;
+  }
+  
+  .service-icon {
+    margin-bottom: 8px;
+  }
+  
+  .service-status {
+    margin-left: 0;
+    margin-top: 8px;
+  }
+  
+  .alert-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.system-status {
+  animation: fadeIn 0.8s ease-out;
+}
+
+/* 加载状态 */
+.ant-spin {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+/* 空状态 */
+.ant-empty {
+  padding: 40px 0;
+}
+
+/* 消息提示 */
+.ant-message {
+  top: 80px !important;
+}
+
+/* 下拉菜单 */
+.ant-dropdown-menu {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* 选择器 */
+.ant-select-dropdown {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* 标签页 */
+.ant-tabs {
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+.ant-tabs-tab {
+  border-radius: 8px 8px 0 0 !important;
+  transition: all 0.3s ease !important;
+}
+
+.ant-tabs-tab-active {
+  background: rgba(255, 122, 69, 0.1) !important;
+}
+
+.ant-tabs-tab:hover {
+  color: #ff7a45 !important;
+}

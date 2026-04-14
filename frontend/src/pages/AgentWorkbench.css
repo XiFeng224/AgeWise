@@ -1,0 +1,544 @@
+/* AgentWorkbench.css - 现代清新风格的总控工作台样式 */
+
+/* 主容器 */
+.agent-workbench {
+  padding: 20px 0;
+}
+
+/* 页面标题 */
+.page-title {
+  margin-bottom: 32px !important;
+  color: #333;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.page-title::before {
+  content: '';
+  width: 4px;
+  height: 20px;
+  background: linear-gradient(180deg, #ff7a45 0%, #fa8c16 100%);
+  border-radius: 2px;
+  margin-right: 12px;
+}
+
+/* 概览卡片区域 */
+.overview-section {
+  margin-bottom: 32px;
+}
+
+/* 统计卡片 */
+.stat-card {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.3s ease !important;
+  overflow: hidden;
+  position: relative;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 12px 12px 0 0;
+}
+
+.warning-card::before {
+  background: linear-gradient(90deg, #faad14, #ff4d4f);
+}
+
+.processing-card::before {
+  background: linear-gradient(90deg, #1890ff, #52c41a);
+}
+
+.urgent-card::before {
+  background: linear-gradient(90deg, #ff4d4f, #722ed1);
+}
+
+.service-card::before {
+  background: linear-gradient(90deg, #52c41a, #1890ff);
+}
+
+.overdue-card::before {
+  background: linear-gradient(90deg, #ff4d4f, #faad14);
+}
+
+/* 统计图标 */
+.stat-icon {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.stat-icon.warning {
+  background: rgba(250, 173, 20, 0.1);
+  position: relative;
+}
+
+.stat-icon.warning::after {
+  content: '⚠';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #faad14;
+  font-size: 12px;
+}
+
+.stat-icon.processing {
+  background: rgba(24, 144, 255, 0.1);
+  position: relative;
+}
+
+.stat-icon.processing::after {
+  content: '🔄';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #1890ff;
+  font-size: 12px;
+}
+
+.stat-icon.urgent {
+  background: rgba(255, 77, 79, 0.1);
+  position: relative;
+}
+
+.stat-icon.urgent::after {
+  content: '🚨';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #ff4d4f;
+  font-size: 12px;
+}
+
+.stat-icon.service {
+  background: rgba(82, 196, 26, 0.1);
+  position: relative;
+}
+
+.stat-icon.service::after {
+  content: '🛎️';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #52c41a;
+  font-size: 12px;
+}
+
+.stat-icon.overdue {
+  background: rgba(207, 19, 34, 0.1);
+  position: relative;
+}
+
+.stat-icon.overdue::after {
+  content: '⏰';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #cf1322;
+  font-size: 12px;
+}
+
+/* 质量筛选区域 */
+.quality-filter-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.quality-select {
+  border-radius: 8px !important;
+}
+
+/* 质量卡片区域 */
+.quality-section {
+  margin-bottom: 32px;
+}
+
+.quality-card {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.3s ease !important;
+}
+
+.quality-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+.quality-hint {
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+}
+
+/* AI决策卡片 */
+.ai-decision-card {
+  margin-bottom: 32px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  border-left: 4px solid #ff7a45 !important;
+}
+
+.ai-decision-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.ai-decision-title {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.ai-icon {
+  font-size: 20px;
+  margin-right: 8px;
+  animation: pulse 2s infinite;
+}
+
+.ai-source-tag {
+  background: rgba(255, 122, 69, 0.1) !important;
+  color: #ff7a45 !important;
+  border-radius: 12px !important;
+  font-size: 12px !important;
+}
+
+.ai-decision-divider {
+  margin: 16px 0 !important;
+}
+
+.ai-decision-descriptions {
+  margin-bottom: 16px !important;
+}
+
+.ai-decision-descriptions .ant-descriptions-item-label {
+  font-weight: 500 !important;
+  color: #333 !important;
+}
+
+.ai-suggestion-alert {
+  border-radius: 8px !important;
+  background: rgba(255, 122, 69, 0.05) !important;
+  border-color: #ffd6b3 !important;
+}
+
+/* 任务卡片 */
+.tasks-card {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+  overflow: hidden !important;
+}
+
+.tasks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.tasks-title {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #333 !important;
+}
+
+.module-select {
+  border-radius: 8px !important;
+}
+
+/* 按钮样式 */
+.refresh-button,
+.escalate-button,
+.demo-button {
+  border-radius: 8px !important;
+  transition: all 0.3s ease !important;
+}
+
+.refresh-button:hover {
+  background: rgba(255, 122, 69, 0.1) !important;
+  color: #ff7a45 !important;
+  border-color: #ff7a45 !important;
+}
+
+.escalate-button:hover {
+  background: #cf1322 !important;
+  border-color: #cf1322 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(207, 19, 34, 0.3);
+}
+
+.demo-button:hover {
+  background: #ff7a45 !important;
+  border-color: #ff7a45 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 122, 69, 0.3);
+}
+
+/* 表格样式 */
+.tasks-table {
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+.tasks-table .ant-table-thead > tr > th {
+  background: #fafafa !important;
+  font-weight: 600 !important;
+  color: #333 !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+}
+
+.tasks-table .ant-table-tbody > tr:hover {
+  background: #f5f7fa !important;
+}
+
+.tasks-table .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #f0f0f0 !important;
+  padding: 12px 16px !important;
+}
+
+.table-pagination {
+  padding: 16px !important;
+  border-top: 1px solid #f0f0f0 !important;
+}
+
+/* 标签样式 */
+.module-tag,
+.type-tag,
+.priority-tag,
+.sla-tag {
+  border-radius: 12px !important;
+  font-size: 12px !important;
+  padding: 2px 8px !important;
+}
+
+.elderly-name {
+  font-weight: 500 !important;
+  color: #333 !important;
+}
+
+.task-title {
+  font-weight: 500 !important;
+  color: #333 !important;
+  line-height: 1.4 !important;
+}
+
+.task-description {
+  color: #666 !important;
+  line-height: 1.4 !important;
+}
+
+.suggested-action {
+  color: #666 !important;
+  line-height: 1.4 !important;
+}
+
+/* 操作按钮 */
+.action-button {
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  padding: 4px 12px !important;
+  transition: all 0.3s ease !important;
+}
+
+.action-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.action-button.primary {
+  background: #ff7a45 !important;
+  border-color: #ff7a45 !important;
+}
+
+.action-button.primary:hover {
+  background: #ff9c6a !important;
+  border-color: #ff9c6a !important;
+}
+
+.action-button.ai {
+  background: rgba(82, 196, 26, 0.1) !important;
+  border-color: #52c41a !important;
+  color: #52c41a !important;
+}
+
+.action-button.ai:hover {
+  background: #52c41a !important;
+  color: white !important;
+}
+
+/* 时间线抽屉 */
+.timeline-drawer {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+}
+
+.timeline-drawer .ant-drawer-header {
+  background: linear-gradient(135deg, #ff7a45 0%, #fa8c16 100%) !important;
+  color: white !important;
+  border-bottom: none !important;
+}
+
+.timeline-drawer .ant-drawer-title {
+  color: white !important;
+  font-weight: 600 !important;
+}
+
+.timeline-drawer .ant-drawer-close {
+  color: white !important;
+}
+
+.timeline-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  color: #999;
+}
+
+.timeline {
+  padding: 24px;
+}
+
+.timeline-item {
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.timeline-item:last-child {
+  border-bottom: none;
+}
+
+.timeline-item-title {
+  font-size: 14px !important;
+  margin-bottom: 8px !important;
+  color: #333 !important;
+}
+
+.timeline-item-time {
+  font-size: 12px !important;
+  margin-bottom: 8px !important;
+}
+
+.timeline-item-detail {
+  font-size: 14px !important;
+  color: #666 !important;
+  line-height: 1.4 !important;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .agent-workbench {
+    padding: 16px 0;
+  }
+  
+  .page-title {
+    font-size: 18px !important;
+    margin-bottom: 24px !important;
+  }
+  
+  .tasks-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .tasks-header .ant-space {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  
+  .tasks-header .ant-space-item {
+    flex: 1;
+    min-width: 120px;
+  }
+  
+  .timeline-drawer {
+    width: 90% !important;
+  }
+}
+
+/* 动画效果 */
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 加载状态 */
+.ant-spin {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+/* 空状态 */
+.ant-empty {
+  padding: 40px 0;
+}
+
+/* 消息提示 */
+.ant-message {
+  top: 80px !important;
+}
+
+/* 下拉菜单 */
+.ant-dropdown-menu {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* 选择器 */
+.ant-select-dropdown {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* 标签页 */
+.ant-tabs {
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+.ant-tabs-tab {
+  border-radius: 8px 8px 0 0 !important;
+  transition: all 0.3s ease !important;
+}
+
+.ant-tabs-tab-active {
+  background: rgba(24, 144, 255, 0.1) !important;
+}
+
+.ant-tabs-tab:hover {
+  color: #1890ff !important;
+}

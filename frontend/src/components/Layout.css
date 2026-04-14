@@ -1,0 +1,308 @@
+/* Layout.css - 现代清新风格的布局样式 */
+
+/* 主容器 */
+.layout-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #fff7e6 0%, #ffedcc 100%);
+}
+
+/* 侧边栏 */
+.layout-sider {
+  background: linear-gradient(180deg, #ff7a45 0%, #fa8c16 100%) !important;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+/* logo区域 */
+.layout-logo {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  transition: all 0.3s ease;
+}
+
+.logo-icon {
+  font-size: 24px;
+  color: white;
+  margin-right: 12px;
+  transition: all 0.3s ease;
+}
+
+.logo-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.logo-text.collapsed {
+  display: none;
+}
+
+/* 菜单 */
+.layout-menu {
+  background: transparent !important;
+  border-right: none !important;
+}
+
+.layout-menu .ant-menu-item {
+  margin: 8px 12px !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease;
+}
+
+.layout-menu .ant-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.layout-menu .ant-menu-item-selected {
+  background: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.layout-menu .ant-menu-item-selected .anticon {
+  color: white !important;
+}
+
+.layout-menu .anticon {
+  font-size: 18px;
+  margin-right: 12px;
+  transition: all 0.3s ease;
+}
+
+/* 子菜单 */
+.layout-menu .ant-menu-submenu-title {
+  margin: 8px 12px !important;
+  border-radius: 8px !important;
+  transition: all 0.3s ease;
+}
+
+.layout-menu .ant-menu-submenu-title:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.layout-menu .ant-menu-sub {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px;
+  margin: 0 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 顶部 header */
+.layout-header {
+  background: white !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  height: 64px;
+  transition: all 0.3s ease;
+}
+
+.layout-header-toggle {
+  font-size: 18px !important;
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  margin-right: 16px !important;
+  transition: all 0.3s ease;
+}
+
+.layout-header-toggle:hover {
+  background: rgba(255, 122, 69, 0.1) !important;
+  color: #ff7a45 !important;
+}
+
+.layout-header-right {
+  display: flex;
+  align-items: center;
+}
+
+/* 通知按钮 */
+.notification-button {
+  margin-right: 16px !important;
+  font-size: 18px !important;
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  transition: all 0.3s ease;
+}
+
+.notification-button:hover {
+  background: rgba(255, 122, 69, 0.1) !important;
+  color: #ff7a45 !important;
+}
+
+.notification-icon {
+  font-size: 18px;
+  transition: all 0.3s ease;
+}
+
+.notification-badge {
+  background: #ff7a45 !important;
+  box-shadow: 0 2px 4px rgba(255, 122, 69, 0.3);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 122, 69, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 122, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 122, 69, 0);
+  }
+}
+
+/* 用户信息 */
+.user-profile {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.user-profile:hover {
+  background: rgba(255, 122, 69, 0.1);
+}
+
+.user-avatar {
+  margin-right: 12px !important;
+  background: linear-gradient(135deg, #ff7a45 0%, #fa8c16 100%) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.user-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.user-name {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #333 !important;
+  margin-bottom: 2px !important;
+}
+
+.user-role {
+  font-size: 12px !important;
+  color: #999 !important;
+}
+
+/* 内容区域 */
+.layout-content {
+  margin: 24px !important;
+  padding: 32px !important;
+  min-height: calc(100vh - 112px) !important;
+  background: white !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.layout-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #ff7a45, #fa8c16, #faad14, #ffd666);
+  border-radius: 12px 12px 0 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .layout-content {
+    margin: 16px !important;
+    padding: 24px !important;
+  }
+  
+  .logo-text {
+    font-size: 16px;
+  }
+  
+  .layout-menu .anticon {
+    font-size: 16px;
+  }
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 动画效果 */
+.layout-sider,
+.layout-header,
+.layout-content {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 菜单展开/收起动画 */
+.ant-layout-sider-collapsed .layout-logo {
+  justify-content: center;
+}
+
+.ant-layout-sider-collapsed .logo-icon {
+  margin-right: 0;
+}
+
+/* 按钮点击效果 */
+.ant-btn {
+  transition: all 0.3s ease !important;
+}
+
+.ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.ant-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}

@@ -1,0 +1,32 @@
+{
+  "name": "community-elderly-care",
+  "version": "1.0.0",
+  "description": "面向社区养老的智能数据 Agent 与主动风险预警平台",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:agent\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:agent": "cd agent-service && python main.py",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test"
+  },
+  "keywords": [
+    "elderly-care",
+    "ai-agent",
+    "risk-warning",
+    "community-service"
+  ],
+  "author": "Community Elderly Care Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^7.6.0"
+  },
+  "dependencies": {
+    "axios": "^1.15.0"
+  }
+}

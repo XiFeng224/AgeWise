@@ -482,7 +482,7 @@ class AgentService {
           } else {
             warnings = await Warning.findAll({ 
               include: [{ model: Elderly, as: 'elderly' }],
-              order: [['created_at', 'DESC']],
+              order: [['createdAt', 'DESC']],
               limit: 10
             })
           }

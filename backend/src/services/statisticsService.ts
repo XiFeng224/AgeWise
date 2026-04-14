@@ -117,7 +117,7 @@ class StatisticsService {
         }),
         ServiceRequest.findAll({
           where: {
-            created_at: {
+            createdAt: {
               [Op.gte]: startDate
             }
           }
@@ -153,7 +153,7 @@ class StatisticsService {
 
       // 合并服务请求到趋势：有请求也会形成曲线，避免全空
       serviceRequests.forEach((req: any) => {
-        const month = new Date(req.created_at)
+        const month = new Date(req.createdAt)
         const monthKey = `${month.getMonth() + 1}月`
         if (monthlyData[monthKey]) {
           if ((req.requestType || '').includes('紧急') || req.priority === 'high') {
@@ -204,13 +204,13 @@ class StatisticsService {
       // 获取历史预警数据
       const historicalData = await Warning.findAll({
         limit: 30,
-        order: [['created_at', 'DESC']]
+        order: [['createdAt', 'DESC']]
       })
       
       // 计算每天的预警数量
       const dailyWarnings: any = {}
       historicalData.forEach(warning => {
-        const date = new Date(warning.created_at)
+        const date = new Date(warning.createdAt)
         const dateKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
         if (!dailyWarnings[dateKey]) {
           dailyWarnings[dateKey] = 0
@@ -324,7 +324,7 @@ class StatisticsService {
       // 统计预警数据
       const warnings = await Warning.findAll({
         where: {
-          created_at: {
+          createdAt: {
             [Op.between]: [startDate, endDate]
           }
         }

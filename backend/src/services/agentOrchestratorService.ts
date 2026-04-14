@@ -19,7 +19,7 @@ export interface AgentTaskCard {
   slaStatus: 'normal' | 'warning' | 'overdue'
   escalationTarget: '护理组长' | '值班医生' | '运营经理'
   eventScore: number
-  created_at: Date
+  createdAt: Date
 }
 
 class AgentOrchestratorService {
@@ -54,8 +54,8 @@ class AgentOrchestratorService {
     return table[module][priority]
   }
 
-  private buildSla(created_at: Date, slaMinutes: number) {
-    const elapsedMinutes = Math.floor((Date.now() - new Date(created_at).getTime()) / 60000)
+  private buildSla(createdAt: Date, slaMinutes: number) {
+    const elapsedMinutes = Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000)
     const ratio = elapsedMinutes / slaMinutes
     const slaStatus: AgentTaskCard['slaStatus'] = ratio >= 1 ? 'overdue' : ratio >= 0.8 ? 'warning' : 'normal'
     return { elapsedMinutes, slaStatus }
@@ -138,13 +138,13 @@ class AgentOrchestratorService {
       Warning.findAll({
         where: { status: { [Op.in]: ['pending', 'processing'] } },
         include: [{ model: Elderly, as: 'elderly', attributes: ['id', 'name'] }],
-        order: [['created_at', 'DESC']],
+        order: [['createdAt', 'DESC']],
         limit
       }),
       ServiceRequest.findAll({
         where: { status: { [Op.in]: ['pending', 'assigned'] } },
         include: [{ model: Elderly, as: 'elderly', attributes: ['id', 'name'] }],
-        order: [['created_at', 'DESC']],
+        order: [['createdAt', 'DESC']],
         limit
       })
     ])
@@ -152,7 +152,7 @@ class AgentOrchestratorService {
     const warningCards: AgentTaskCard[] = warnings.map((item: any) => {
       const selectedModule: AgentTaskCard['module'] = item.warningType?.includes('medical') || item.warningType?.includes('health') ? '医护' : '护理'
       const slaMinutes = this.getSlaMinutes(selectedModule, item.riskLevel)
-      const { elapsedMinutes, slaStatus } = this.buildSla(item.created_at, slaMinutes)
+      const { elapsedMinutes, slaStatus } = this.buildSla(item.createdAt, slaMinutes)
       const duty = this.getDutyRoutingSuggestion(selectedModule)
       const escalationTarget = this.getEscalationTarget(selectedModule)
 
@@ -184,14 +184,14 @@ class AgentOrchestratorService {
         slaStatus,
         escalationTarget,
         eventScore,
-        created_at: item.created_at
+        createdAt: item.createdAt
       }
     })
 
     const serviceCards: AgentTaskCard[] = serviceRequests.map((item: any) => {
       const selectedModule: AgentTaskCard['module'] = item.requestType?.includes('维修') ? '后勤' : item.requestType?.includes('收费') ? '收费' : '护理'
       const slaMinutes = this.getSlaMinutes(selectedModule, item.priority)
-      const { elapsedMinutes, slaStatus } = this.buildSla(item.created_at, slaMinutes)
+      const { elapsedMinutes, slaStatus } = this.buildSla(item.createdAt, slaMinutes)
       const duty = this.getDutyRoutingSuggestion(selectedModule)
       const escalationTarget = this.getEscalationTarget(selectedModule)
 
@@ -223,12 +223,12 @@ class AgentOrchestratorService {
         slaStatus,
         escalationTarget,
         eventScore,
-        created_at: item.created_at
+        createdAt: item.createdAt
       }
     })
 
     let cards = [...warningCards, ...serviceCards]
-      .sort((a, b) => b.eventScore - a.eventScore || new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .sort((a, b) => b.eventScore - a.eventScore || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
     if (module) {
       cards = cards.filter(c => c.module === module)
@@ -248,26 +248,26 @@ class AgentOrchestratorService {
 
   async getFamilyTimeline(elderlyId: number) {
     const [warnings, serviceRequests, notifications] = await Promise.all([
-      Warning.findAll({ where: { elderlyId }, order: [['created_at', 'DESC']], limit: 20 }),
-      ServiceRequest.findAll({ where: { elderlyId }, order: [['created_at', 'DESC']], limit: 20 }),
-      Notification.findAll({ where: { relatedId: elderlyId }, order: [['created_at', 'DESC']], limit: 20 })
+      Warning.findAll({ where: { elderlyId }, order: [['createdAt', 'DESC']], limit: 20 }),
+      ServiceRequest.findAll({ where: { elderlyId }, order: [['createdAt', 'DESC']], limit: 20 }),
+      Notification.findAll({ where: { relatedId: elderlyId }, order: [['createdAt', 'DESC']], limit: 20 })
     ])
 
     const events = [
       ...warnings.map((w: any) => ({
-        time: w.created_at,
+        time: w.createdAt,
         type: '预警',
         title: w.title,
         detail: `${w.description}（状态：${w.status}）`
       })),
       ...serviceRequests.map((s: any) => ({
-        time: s.created_at,
+        time: s.createdAt,
         type: '服务',
         title: s.requestType,
         detail: `${s.description}（状态：${s.status}）`
       })),
       ...notifications.map((n: any) => ({
-        time: n.created_at,
+        time: n.createdAt,
         type: '通知',
         title: n.title,
         detail: n.content
@@ -285,16 +285,16 @@ class AgentOrchestratorService {
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
 
     const [totalWarnings, resolvedWarnings, totalServiceRequests, completedServiceRequests] = await Promise.all([
-      Warning.count({ where: { created_at: { [Op.gte]: since } } }),
-      Warning.findAll({ where: { created_at: { [Op.gte]: since }, status: 'resolved', handleTime: { [Op.not]: null } } }),
-      ServiceRequest.count({ where: { created_at: { [Op.gte]: since } } }),
-      ServiceRequest.count({ where: { created_at: { [Op.gte]: since }, status: 'completed' } })
+      Warning.count({ where: { createdAt: { [Op.gte]: since } } }),
+      Warning.findAll({ where: { createdAt: { [Op.gte]: since }, status: 'resolved', handleTime: { [Op.not]: null } } }),
+      ServiceRequest.count({ where: { createdAt: { [Op.gte]: since } } }),
+      ServiceRequest.count({ where: { createdAt: { [Op.gte]: since }, status: 'completed' } })
     ])
 
     const avgWarningHandleMinutes = resolvedWarnings.length
       ? Math.round(
         resolvedWarnings.reduce((sum: number, item: any) => {
-          const created = new Date(item.created_at).getTime()
+          const created = new Date(item.createdAt).getTime()
           const handled = new Date(item.handleTime).getTime()
           return sum + (handled - created) / 60000
         }, 0) / resolvedWarnings.length
@@ -303,14 +303,14 @@ class AgentOrchestratorService {
 
     // 超时率采用“时间窗口内产生的任务”口径（包含已完成），更符合运营评估
     const [windowWarnings, windowServiceRequests] = await Promise.all([
-      Warning.findAll({ where: { created_at: { [Op.gte]: since } }, attributes: ['id', 'created_at', 'status', 'riskLevel', 'warningType'] }),
-      ServiceRequest.findAll({ where: { created_at: { [Op.gte]: since } }, attributes: ['id', 'created_at', 'status', 'priority', 'requestType'] })
+      Warning.findAll({ where: { createdAt: { [Op.gte]: since } }, attributes: ['id', 'createdAt', 'status', 'riskLevel', 'warningType'] }),
+      ServiceRequest.findAll({ where: { createdAt: { [Op.gte]: since } }, attributes: ['id', 'createdAt', 'status', 'priority', 'requestType'] })
     ])
 
     const warningOverdueCount = windowWarnings.filter((w: any) => {
       const module: AgentTaskCard['module'] = w.warningType?.includes('medical') || w.warningType?.includes('health') ? '医护' : '护理'
       const sla = this.getSlaMinutes(module, w.riskLevel)
-      const elapsed = (Date.now() - new Date(w.created_at).getTime()) / 60000
+      const elapsed = (Date.now() - new Date(w.createdAt).getTime()) / 60000
       const closed = w.status === 'resolved'
       return !closed && elapsed > sla
     }).length
@@ -318,7 +318,7 @@ class AgentOrchestratorService {
     const serviceOverdueCount = windowServiceRequests.filter((s: any) => {
       const module: AgentTaskCard['module'] = s.requestType?.includes('维修') ? '后勤' : s.requestType?.includes('收费') ? '收费' : '护理'
       const sla = this.getSlaMinutes(module, s.priority)
-      const elapsed = (Date.now() - new Date(s.created_at).getTime()) / 60000
+      const elapsed = (Date.now() - new Date(s.createdAt).getTime()) / 60000
       const closed = s.status === 'completed'
       return !closed && elapsed > sla
     }).length

@@ -642,6 +642,7 @@ const DataQuery: React.FC = () => {
                     {recentTrace ? <Tag color="blue">traceId: {recentTrace}</Tag> : null}
                   </Space>
                   <div style={{ lineHeight: 1.85 }}>{answer}</div>
+                  {summary && <Text type="secondary" style={{ marginTop: 8, display: 'block' }}>摘要：{summary}</Text>}
                   <Text type="secondary">{responseMode ? `当前数据模式：${responseMode === 'demo' ? '演示模式' : '实时模式'}` : ''}{modelSource ? ` ｜ 模型来源：${modelSource === 'qwen' ? '千问' : modelSource === 'nlp' ? 'NLP Agent' : modelSource === 'deepseek' ? 'DeepSeek' : modelSource === 'moonshot' ? 'Moonshot' : '规则引擎'}` : ''}{latencyMs ? ` ｜ 响应耗时：${latencyMs}ms` : ''}</Text>
                   <Space wrap>
                     <Button type="primary" icon={<RocketOutlined />} onClick={() => navigate('/agent/vnext')}>

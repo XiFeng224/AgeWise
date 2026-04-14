@@ -2,6 +2,7 @@ import { Op } from 'sequelize'
 import aiAgentService from './aiAgentService'
 import agentOrchestratorService from './agentOrchestratorService'
 import { Elderly, HealthData, Warning, ServiceRequest, Notification, User, ServiceRecord, ServiceProvider } from '../models'
+import aiAgentQwenService from './aiAgentService'
 
 type StrategyMode = 'conservative' | 'balanced' | 'aggressive'
 
@@ -291,6 +292,10 @@ class AgentVNextService {
     strategyMode?: StrategyMode
     riskLevel?: 'low' | 'medium' | 'high'
     module?: '护理' | '医护' | '后勤' | '收费' | '接待'
+    modelPreference?: 'auto' | 'qwen' | 'deepseek' | 'moonshot' | 'nlp' | 'rule'
+    sourceQuery?: string
+    sourceAnswer?: string
+    sourceSuggestedAction?: string[]
   }) {
     await this.ensurePolicyLoaded()
 
@@ -304,6 +309,7 @@ class AgentVNextService {
     }
 
     const strategyMode = input.strategyMode || 'balanced'
+    const modelPreference = input.modelPreference || 'auto'
     const context = await this.getContextSnapshot(input.elderlyId)
     const references = await this.findReferenceCases(input.elderlyId, input.eventSummary)
     const risk = this.applyStrategy(strategyMode, input.riskLevel || 'medium') as 'low' | 'medium' | 'high'
@@ -320,6 +326,21 @@ class AgentVNextService {
 
     let decision: any
     try {
+      const qwenSummary = await aiAgentQwenService.answer({
+        question: `请为养老机构运行台生成任务规划摘要。事件：${input.eventSummary}`,
+        context: {
+          elderlyId: input.elderlyId,
+          elderlyName: context.profile.name,
+          age: context.profile.age,
+          riskLevel: risk,
+          strategyMode,
+          module,
+          sourceQuery: input.sourceQuery || '',
+          sourceAnswer: input.sourceAnswer || '',
+          sourceSuggestedAction: input.sourceSuggestedAction || []
+        }
+      })
+
       decision = await aiAgentService.fullDecision({
         triageInput: {
           elderlyName: context.profile.name,
@@ -340,9 +361,18 @@ class AgentVNextService {
           profile: context.profile,
           warnings: context.warningHistory.slice(0, 5),
           providers: availableRoles,
-          references
+          references,
+          sourceQuery: input.sourceQuery || '',
+          sourceAnswer: input.sourceAnswer || '',
+          sourceSuggestedAction: input.sourceSuggestedAction || [],
+          modelPreference
         }
       })
+      decision.copilot = {
+        ...decision.copilot,
+        summary: qwenSummary?.answer || qwenSummary?.summary || decision?.copilot?.summary,
+        _meta: { ...(decision?.copilot?._meta || {}), source: qwenSummary?._meta?.source || 'qwen' }
+      }
     } catch {
       decision = {
         triage: { actions: ['先完成关键体征复测并评估风险等级'] },
@@ -545,6 +575,10 @@ class AgentVNextService {
     riskLevel?: 'low' | 'medium' | 'high'
     module?: '护理' | '医护' | '后勤' | '收费' | '接待'
     autoExecute?: boolean
+    modelPreference?: 'auto' | 'qwen' | 'deepseek' | 'moonshot' | 'nlp' | 'rule'
+    sourceQuery?: string
+    sourceAnswer?: string
+    sourceSuggestedAction?: string[]
   }) {
     const plan = await this.planTask(input)
 
@@ -575,7 +609,8 @@ class AgentVNextService {
       plan,
       execution,
       executionTrace,
-      executed: input.autoExecute !== false
+      executed: input.autoExecute !== false,
+      planningAnswer: decision?.copilot?.summary || plan?.planner?.summary || '已生成任务规划'
     }
   }
 

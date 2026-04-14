@@ -45,6 +45,7 @@ const AgentVNext: React.FC = () => {
 
   const [loading, setLoading] = useState(false)
   const [plan, setPlan] = useState<any>(null)
+  const [planningAnswer, setPlanningAnswer] = useState<string>('')
   const [autonomous, setAutonomous] = useState<any>(null)
   const [outcomeRes, setOutcomeRes] = useState<any>(null)
   const [policyRes, setPolicyRes] = useState<any>(null)
@@ -56,6 +57,7 @@ const AgentVNext: React.FC = () => {
   const [runtimeTaskId, setRuntimeTaskId] = useState<string>('')
   const [runtimeEvents, setRuntimeEvents] = useState<Array<{ at: string; type: string; message: string; data?: any }>>([])
   const [taskSource, setTaskSource] = useState<'manual' | 'query' | 'warning' | 'unknown'>('manual')
+  const [modelPreference, setModelPreference] = useState<'auto' | 'qwen' | 'deepseek' | 'moonshot' | 'nlp' | 'rule'>('auto')
 
   const pollRef = useRef<number | null>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
@@ -182,6 +184,7 @@ const AgentVNext: React.FC = () => {
       })()
       const enhancedPayload = {
         ...payload,
+        modelPreference,
         source: queryContext ? 'question-answer' : 'manual',
         sourceQuery: queryContext?.query || '',
         sourceAnswer: queryContext?.answer || '',
@@ -372,10 +375,11 @@ const AgentVNext: React.FC = () => {
 
               <Card title="输入参数（感知层）" style={{ borderRadius: 16 }}>
                 <Row gutter={16}>
-                  <Col span={7}><Text>选择老人</Text><Select showSearch optionFilterProp="label" placeholder="请选择老人" style={{ width: '100%' }} value={elderlyId} onChange={(v) => setElderlyId(v)} options={elderlyOptions} /></Col>
-                  <Col span={5}><Text>策略模式</Text><Select style={{ width: '100%' }} value={strategyMode} onChange={setStrategyMode} options={[{ label: '保守', value: 'conservative' }, { label: '平衡', value: 'balanced' }, { label: '灵敏', value: 'aggressive' }]} /></Col>
-                  <Col span={5}><Text>模块</Text><Select style={{ width: '100%' }} value={module} onChange={setModule} options={[{ label: '护理', value: '护理' }, { label: '医护', value: '医护' }, { label: '后勤', value: '后勤' }, { label: '收费', value: '收费' }, { label: '接待', value: '接待' }]} /></Col>
+                  <Col span={5}><Text>选择老人</Text><Select showSearch optionFilterProp="label" placeholder="请选择老人" style={{ width: '100%' }} value={elderlyId} onChange={(v) => setElderlyId(v)} options={elderlyOptions} /></Col>
+                  <Col span={4}><Text>策略模式</Text><Select style={{ width: '100%' }} value={strategyMode} onChange={setStrategyMode} options={[{ label: '保守', value: 'conservative' }, { label: '平衡', value: 'balanced' }, { label: '灵敏', value: 'aggressive' }]} /></Col>
+                  <Col span={4}><Text>模块</Text><Select style={{ width: '100%' }} value={module} onChange={setModule} options={[{ label: '护理', value: '护理' }, { label: '医护', value: '医护' }, { label: '后勤', value: '后勤' }, { label: '收费', value: '收费' }, { label: '接待', value: '接待' }]} /></Col>
                   <Col span={4}><Text>风险级别</Text><Select style={{ width: '100%' }} value={riskLevel} onChange={setRiskLevel} options={[{ label: '低', value: 'low' }, { label: '中', value: 'medium' }, { label: '高', value: 'high' }]} /></Col>
+                  <Col span={7}><Text>模型偏好</Text><Select style={{ width: '100%' }} value={modelPreference} onChange={setModelPreference} options={[{ label: '自动选择', value: 'auto' }, { label: '千问', value: 'qwen' }, { label: 'DeepSeek', value: 'deepseek' }, { label: 'Moonshot', value: 'moonshot' }, { label: 'NLP Agent', value: 'nlp' }, { label: '规则兜底', value: 'rule' }]} /></Col>
                 </Row>
                 <div style={{ marginTop: 12 }}>
                   <Text>事件摘要</Text>
@@ -387,14 +391,22 @@ const AgentVNext: React.FC = () => {
               </Card>
 
               <Card title="Agent 操作" style={{ borderRadius: 16 }}>
-                <Space wrap>
-                  <Button type="primary" loading={loading} onClick={createRuntimeTask}>启动任务</Button>
-                  <Button loading={loading} disabled={!runtimeTaskId || taskStatus !== 'pending_approval'} onClick={approveAndExecute}>批准执行</Button>
-                  <Button danger loading={loading} disabled={!runtimeTaskId || taskStatus !== 'pending_approval'} onClick={rejectTask}>驳回任务</Button>
-                  <Button loading={loading} onClick={retryFailed}>重试执行</Button>
-                  <Button danger onClick={handoffToHuman}>人工接管</Button>
-                  <Button loading={loading} onClick={runWeeklyUpdate}>更新策略</Button>
-                  <Button onClick={exportDemoJson}>导出运行报告</Button>
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Space wrap>
+                    <Button type="primary" loading={loading} onClick={createRuntimeTask}>启动任务</Button>
+                    <Button loading={loading} disabled={!runtimeTaskId || taskStatus !== 'pending_approval'} onClick={approveAndExecute}>批准执行</Button>
+                    <Button danger loading={loading} disabled={!runtimeTaskId || taskStatus !== 'pending_approval'} onClick={rejectTask}>驳回任务</Button>
+                    <Button loading={loading} onClick={retryFailed}>重试执行</Button>
+                    <Button danger onClick={handoffToHuman}>人工接管</Button>
+                    <Button loading={loading} onClick={runWeeklyUpdate}>更新策略</Button>
+                    <Button onClick={exportDemoJson}>导出运行报告</Button>
+                  </Space>
+                  <Card size="small" style={{ marginTop: 8, borderRadius: 12, background: '#fafcff' }}>
+                    <Space direction="vertical" style={{ width: '100%' }}>
+                      <Text strong>运行台大模型规划结果</Text>
+                      <Text type="secondary">{plan?.planner?.summary || '尚未生成规划，请先启动任务'}</Text>
+                    </Space>
+                  </Card>
                 </Space>
               </Card>
 

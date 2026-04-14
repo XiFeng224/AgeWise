@@ -302,7 +302,7 @@ const getWarningStats = async (req: Request, res: Response) => {
       const start = new Date(startDate as string)
       const end = new Date(endDate as string)
       if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && start <= end) {
-        dateCondition.createdAt = {
+        dateCondition.created_at = {
           [Op.between]: [start, end]
         }
       }
@@ -355,16 +355,16 @@ const getWarningStats = async (req: Request, res: Response) => {
 
     const trendRows = await Warning.findAll({
       where: {
-        createdAt: {
+        created_at: {
           [Op.gte]: sevenDaysAgo
         }
       },
       attributes: [
-        [fn('DATE', col('createdAt')), 'date'],
+        [fn('DATE', col('created_at')), 'date'],
         [fn('COUNT', col('id')), 'count']
       ],
-      group: [fn('DATE', col('createdAt'))],
-      order: [[fn('DATE', col('createdAt')), 'ASC']],
+      group: [fn('DATE', col('created_at'))],
+      order: [[fn('DATE', col('created_at')), 'ASC']],
       raw: true
     }) as unknown as Array<{ date: string; count: number }>
 
@@ -386,14 +386,14 @@ const getWarningStats = async (req: Request, res: Response) => {
         status: 'resolved',
         handleTime: { [Op.not]: null }
       },
-      attributes: ['createdAt', 'handleTime'],
+      attributes: ['created_at', 'handleTime'],
       raw: true
-    }) as unknown as Array<{ createdAt: string; handleTime: string }>
+    }) as unknown as Array<{ created_at: string; handleTime: string }>
 
     const avgHandleHours = resolvedWithDuration.length > 0
       ? Number((resolvedWithDuration.reduce((sum, item) => {
-          const start = new Date(item.createdAt).getTime()
-          const end = new Date(item.handleTime).getTime()
+          const start = new Date((item as any).created_at || (item as any).createdAt).getTime()
+          const end = new Date((item as any).handleTime).getTime()
           return sum + Math.max(0, end - start)
         }, 0) / resolvedWithDuration.length / (1000 * 60 * 60)).toFixed(2))
       : 0

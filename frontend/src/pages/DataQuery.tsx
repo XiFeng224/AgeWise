@@ -350,32 +350,27 @@ const DataQuery: React.FC = () => {
 
   // 表格列定义（支持动态字段）
   const columns = useMemo(() => {
-    if (!results.length) {
-      return [
-        { title: '姓名', dataIndex: 'name', key: 'name' },
-        { title: '年龄', dataIndex: 'age', key: 'age' },
-        { title: '风险等级', dataIndex: 'riskLevel', key: 'riskLevel' }
-      ]
+    const coreColumns = [
+      { title: '姓名', dataIndex: 'name', key: 'name', fixed: 'left' as const, width: 110 },
+      { title: '年龄', dataIndex: 'age', key: 'age', width: 80 },
+      { title: '性别', dataIndex: 'gender', key: 'gender', width: 80 },
+      { title: '健康状况', dataIndex: 'healthStatus', key: 'healthStatus', width: 100 },
+      { title: '风险等级', dataIndex: 'riskLevel', key: 'riskLevel', width: 100 }
+    ]
+
+    const detailColumn = {
+      title: '详情',
+      key: 'detail',
+      width: 220,
+      render: (_: any, record: QueryResult) => (
+        <Text type="secondary" ellipsis={{ tooltip: `${record.address}｜${record.phone}` }}>
+          {record.address}｜{record.phone}
+        </Text>
+      )
     }
 
-    const first = results[0] as Record<string, any>
-    return Object.keys(first).map((key) => ({
-      title: key,
-      dataIndex: key,
-      key,
-      ellipsis: true,
-      render: (value: any) => {
-        if (key.toLowerCase().includes('risk') || key === 'riskLevel') {
-          const text = String(value ?? '')
-          const color = text.includes('high') || text.includes('紧急') ? 'red' : text.includes('medium') || text.includes('较重') ? 'orange' : 'green'
-          return <Tag color={color}>{text}</Tag>
-        }
-        if (value === null || value === undefined) return '-'
-        if (typeof value === 'object') return JSON.stringify(value)
-        return String(value)
-      }
-    }))
-  }, [results])
+    return [...coreColumns, detailColumn]
+  }, [])
 
   return (
     <div style={{ padding: '24px' }}>
@@ -632,7 +627,16 @@ const DataQuery: React.FC = () => {
         )}
 
         <Col span={24}>
-          <Card title={`查询结果 (${results.length} 条记录)`}>
+          <Card
+            title={`查询结果 (${results.length} 条记录)`}
+            extra={
+              <Space wrap>
+                <Tag color="processing">{modelSource ? `模型：${modelSource === 'qwen' ? '千问' : modelSource === 'nlp' ? 'NLP Agent' : modelSource === 'deepseek' ? 'DeepSeek' : modelSource === 'moonshot' ? 'Moonshot' : '规则引擎'}` : '模型：自动'}</Tag>
+                {latencyMs ? <Tag color="blue">耗时：{latencyMs}ms</Tag> : null}
+                <Tag color={shouldEscalate ? 'warning' : 'success'}>{shouldEscalate ? '已升级任务' : '仅回答'}</Tag>
+              </Space>
+            }
+          >
             {answer && (
               <Card size="small" style={{ marginBottom: '16px', borderRadius: 16, background: 'linear-gradient(135deg, #fbfcfd 0%, #eef2f6 100%)' }}>
                 <Space direction="vertical" style={{ width: '100%' }}>
@@ -652,6 +656,37 @@ const DataQuery: React.FC = () => {
                 </Space>
               </Card>
             )}
+
+            <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+              <Col xs={24} lg={12}>
+                <Card size="small" title="最近会话" style={{ borderRadius: 14, height: '100%' }}>
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    {recentSessions.length > 0 ? recentSessions.map((session, index) => (
+                      <Card key={`${session.traceId || index}`} size="small" style={{ borderRadius: 12, background: '#fafcff' }}>
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                          <Space wrap>
+                            <Tag color={session.escalate ? 'warning' : 'success'}>{session.escalate ? '已升级任务' : '已回答'}</Tag>
+                            {session.traceId ? <Tag color="blue">traceId: {session.traceId}</Tag> : null}
+                          </Space>
+                          <Text strong>{session.query}</Text>
+                          <Text type="secondary">{session.answer}</Text>
+                        </Space>
+                      </Card>
+                    )) : <Text type="secondary">暂无会话</Text>}
+                  </Space>
+                </Card>
+              </Col>
+              <Col xs={24} lg={12}>
+                <Card size="small" title="结果摘要" style={{ borderRadius: 14, height: '100%' }}>
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Text>查询模式：{responseMode ? (responseMode === 'demo' ? '演示模式' : '实时模式') : '未设置'}</Text>
+                    <Text>升级状态：{shouldEscalate ? '建议进入运行台' : '当前可直接答复'}</Text>
+                    <Text>建议动作：{suggestedActions.length > 0 ? suggestedActions.join('；') : '暂无'}</Text>
+                    {recentTrace ? <Text type="secondary">最近 traceId：{recentTrace}</Text> : null}
+                  </Space>
+                </Card>
+              </Col>
+            </Row>
 
             {shouldEscalate && (
               <Alert
@@ -705,13 +740,14 @@ const DataQuery: React.FC = () => {
                 columns={columns}
                 dataSource={results}
                 rowKey="id"
+                size="small"
                 pagination={{
-                  pageSize: 10,
+                  pageSize: 8,
                   showSizeChanger: true,
                   showQuickJumper: true,
                   showTotal: (total) => `共 ${total} 条记录`
                 }}
-                scroll={{ x: 800 }}
+                scroll={{ x: 'max-content' }}
               />
             </Spin>
           </Card>

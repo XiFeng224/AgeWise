@@ -43,6 +43,34 @@ const templates: HighRiskTemplate[] = [
       { dataType: 'steps', value: 260, unit: '步', isAbnormal: true },
       { dataType: 'sleep', value: 11.2, unit: '小时', isAbnormal: true }
     ]
+  },
+  {
+    label: '跌倒风险',
+    points: [
+      { dataType: 'steps', value: 90, unit: '步', isAbnormal: true },
+      { dataType: 'heart_rate', value: 126, unit: '次/分钟', isAbnormal: true }
+    ]
+  },
+  {
+    label: '血氧偏低',
+    points: [
+      { dataType: 'temperature', value: 37.4, unit: '°C', isAbnormal: false },
+      { dataType: 'heart_rate', value: 116, unit: '次/分钟', isAbnormal: true }
+    ]
+  },
+  {
+    label: '睡眠紊乱',
+    points: [
+      { dataType: 'sleep', value: 3.1, unit: '小时', isAbnormal: true },
+      { dataType: 'heart_rate', value: 111, unit: '次/分钟', isAbnormal: true }
+    ]
+  },
+  {
+    label: '服药漏服',
+    points: [
+      { dataType: 'blood_pressure', value: 152, value2: 98, unit: 'mmHg', isAbnormal: true },
+      { dataType: 'heart_rate', value: 104, unit: '次/分钟', isAbnormal: true }
+    ]
   }
 ]
 

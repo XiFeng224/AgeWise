@@ -339,7 +339,11 @@ router.post('/plan', authenticate, validateBody({
       eventSummary,
       strategyMode: normalizeMode(body.strategyMode),
       riskLevel: normalizeRisk(body.riskLevel),
-      module: normalizeModule(body.module)
+      module: normalizeModule(body.module),
+      modelPreference: body.modelPreference,
+      sourceQuery: body.sourceQuery,
+      sourceAnswer: body.sourceAnswer,
+      sourceSuggestedAction: Array.isArray(body.sourceSuggestedAction) ? body.sourceSuggestedAction : []
     })
 
     return sendSuccess(res, data)
@@ -389,7 +393,11 @@ router.post('/autonomous', authenticate, authorize(['admin', 'manager']), valida
       strategyMode: normalizeMode(body.strategyMode),
       riskLevel: normalizeRisk(body.riskLevel),
       module: normalizeModule(body.module),
-      autoExecute: body.autoExecute !== false
+      autoExecute: body.autoExecute !== false,
+      modelPreference: body.modelPreference,
+      sourceQuery: body.sourceQuery,
+      sourceAnswer: body.sourceAnswer,
+      sourceSuggestedAction: Array.isArray(body.sourceSuggestedAction) ? body.sourceSuggestedAction : []
     })
 
     return sendSuccess(res, {

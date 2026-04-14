@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Layout, 
   Card, 
@@ -9,7 +9,9 @@ import {
   Select, 
   Tag, 
   Spin, 
-  message 
+  message,
+  Button,
+  Empty
 } from 'antd';
 import { 
   PlayCircleOutlined, 
@@ -17,7 +19,9 @@ import {
   FilterOutlined, 
   ClockCircleOutlined, 
   UserOutlined, 
-  HeartOutlined 
+  HeartOutlined,
+  PauseCircleOutlined,
+  ReloadOutlined
 } from '@ant-design/icons';
 import './MedicalProtection.css';
 
@@ -40,12 +44,15 @@ interface VideoItem {
 }
 
 const MedicalProtection: React.FC = () => {
+  const videoRef = useRef<HTMLVideoElement | null>(null)
   const [loading, setLoading] = useState<boolean>(true);
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [filteredVideos, setFilteredVideos] = useState<VideoItem[]>([]);
   const [searchText, setSearchText] = useState<string>('');
   const [category, setCategory] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string>('all');
+  const [activeVideo, setActiveVideo] = useState<VideoItem | null>(null);
+  const [playing, setPlaying] = useState(false);
 
   // 模拟视频数据 - 国内医疗视频
   const mockVideos: VideoItem[] = [
@@ -168,9 +175,31 @@ const MedicalProtection: React.FC = () => {
 
   // 处理视频点击
   const handleVideoClick = (video: VideoItem) => {
-    message.info(`正在播放视频：${video.title}`);
-    // 这里可以添加视频播放逻辑
+    setActiveVideo(video)
+    setPlaying(false)
+    message.info(`正在准备播放视频：${video.title}`)
   };
+
+  const handleTogglePlay = async () => {
+    if (!videoRef.current) return
+    if (playing) {
+      videoRef.current.pause()
+      setPlaying(false)
+      return
+    }
+    try {
+      await videoRef.current.play()
+      setPlaying(true)
+    } catch {
+      message.warning('当前视频暂时无法自动播放，请点击视频区域或检查浏览器设置')
+    }
+  }
+
+  const handleReloadVideo = () => {
+    if (!videoRef.current) return
+    videoRef.current.load()
+    setPlaying(false)
+  }
 
   return (
     <Content className="medical-protection-content">
@@ -182,6 +211,53 @@ const MedicalProtection: React.FC = () => {
           提供专业的老年人医疗防护知识和技能培训视频
         </Text>
       </div>
+
+      {activeVideo && (
+        <Card
+          title={`正在播放：${activeVideo.title}`}
+          className="medical-protection-player-card"
+          extra={
+            <Space>
+              <Button icon={<ReloadOutlined />} onClick={handleReloadVideo}>重载</Button>
+              <Button icon={playing ? <PauseCircleOutlined /> : <PlayCircleOutlined />} onClick={handleTogglePlay}>
+                {playing ? '暂停' : '播放'}
+              </Button>
+            </Space>
+          }
+          style={{ marginBottom: 16 }}
+        >
+          <Row gutter={16} align="stretch">
+            <Col xs={24} lg={16}>
+              <div className="medical-video-player-wrap">
+                <video
+                  ref={videoRef}
+                  className="medical-video-player"
+                  controls
+                  poster={activeVideo.cover}
+                  src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+                  autoPlay={false}
+                  preload="metadata"
+                  onPlay={() => setPlaying(true)}
+                  onPause={() => setPlaying(false)}
+                  onEnded={() => setPlaying(false)}
+                  onClick={handleTogglePlay}
+                />
+              </div>
+            </Col>
+            <Col xs={24} lg={8}>
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <Text strong>{activeVideo.description}</Text>
+                <Space wrap>
+                  <Tag color="blue">{activeVideo.author}</Tag>
+                  <Tag color="green">{activeVideo.category}</Tag>
+                  <Tag color="processing">{activeVideo.duration}</Tag>
+                </Space>
+                <Text type="secondary">提示：点击视频播放器即可播放/暂停，也可点击上方按钮控制播放。</Text>
+              </Space>
+            </Col>
+          </Row>
+        </Card>
+      )}
 
       <div className="medical-protection-filters">
         <Row gutter={[16, 16]} align="middle">

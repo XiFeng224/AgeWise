@@ -200,9 +200,13 @@ const AgentVNext: React.FC = () => {
       pushQueue('pending_approval', `待审批任务: ${eventSummary}`, data.traceId)
       message.success('任务已创建并完成规划，请审批')
     } catch (error: any) {
+      const backendMsg = error?.response?.data?.error || error?.response?.data?.message || error?.message || '任务创建失败'
+      const fallbackMsg = /timeout|超时|Model|模型|Qwen|DeepSeek/i.test(backendMsg)
+        ? '模型暂时不可用，已切换规则兜底，请稍后重试'
+        : backendMsg
       setTaskStatus('failed')
-      pushQueue('failed', `任务创建失败: ${eventSummary}`)
-      message.error(error?.response?.data?.error || '任务创建失败')
+      pushQueue('failed', `任务创建失败: ${eventSummary}`, lastTraceId)
+      message.error(fallbackMsg)
     } finally {
       setLoading(false)
     }
@@ -453,9 +457,9 @@ const AgentVNext: React.FC = () => {
         </Col>
       </Row>
 
-      <Row gutter={16} style={{ marginBottom: 16 }}>
+      <Row gutter={16} style={{ marginBottom: 16, alignItems: 'stretch' }}>
         <Col span={12}>
-          <Card title="规划结果（规划层）" style={{ marginBottom: 16, borderRadius: 16, minHeight: 220 }}>
+          <Card title="规划结果（规划层）" style={{ marginBottom: 16, borderRadius: 16, minHeight: 260, height: '100%' }}>
             <Space direction="vertical" style={{ width: '100%' }}>
               <Space wrap>
                 <Tag color={plan?.cache?.hit ? 'success' : 'blue'}>{plan?.cache?.hit ? '缓存命中' : '实时规划'}</Tag>
@@ -471,7 +475,7 @@ const AgentVNext: React.FC = () => {
           </Card>
         </Col>
         <Col span={12}>
-          <Card title="运行阶段摘要" style={{ marginBottom: 16, borderRadius: 16, minHeight: 220 }}>
+          <Card title="运行阶段摘要" style={{ marginBottom: 16, borderRadius: 16, minHeight: 260, height: '100%' }}>
             <Space direction="vertical" style={{ width: '100%' }}>
               <Space wrap>
                 <Tag color="blue">感知</Tag>
@@ -492,9 +496,9 @@ const AgentVNext: React.FC = () => {
         </Col>
       </Row>
 
-      <Row gutter={16} style={{ marginBottom: 16 }}>
+      <Row gutter={16} style={{ marginBottom: 16, alignItems: 'stretch' }}>
         <Col span={12}>
-          <Card title="结果回写与策略更新" style={{ borderRadius: 16, minHeight: 220 }}>
+          <Card title="结果回写与策略更新" style={{ borderRadius: 16, minHeight: 180, height: '100%' }}>
             <Descriptions bordered size="small" column={1}>
               <Descriptions.Item label="记录ID">{outcomeRes?.id || '-'}</Descriptions.Item>
               <Descriptions.Item label="服务类型">{outcomeRes?.serviceType || '-'}</Descriptions.Item>
@@ -507,7 +511,7 @@ const AgentVNext: React.FC = () => {
           </Card>
         </Col>
         <Col span={12}>
-          <Card title="执行失败项（高亮）" style={{ borderRadius: 16, minHeight: 220 }}>
+          <Card title="执行失败项（高亮）" style={{ borderRadius: 16, minHeight: 180, height: '100%' }}>
             {failedExecutions.length === 0 ? <Text type="secondary">当前无失败项</Text> : failedExecutions.map((item: any, idx: number) => <Alert key={idx} type="error" showIcon style={{ marginBottom: 8 }} message={`工具：${item.tool || 'unknown'}`} description={item.error || '执行失败'} />)}
           </Card>
         </Col>
@@ -515,7 +519,7 @@ const AgentVNext: React.FC = () => {
 
       <Row gutter={16}>
         <Col span={24}>
-          <Card title="工具执行日志（可展开）" style={{ marginBottom: 16, borderRadius: 16 }}>
+          <Card title="工具执行日志（可展开）" style={{ marginBottom: 16, borderRadius: 16, minHeight: 220 }}>
             {(toolExecutions || []).length === 0 ? <Text type="secondary">暂无工具执行记录，请先审批并执行任务</Text> : <Collapse items={toolExecutions.map((item: any, idx: number) => ({ key: String(idx + 1), label: `${item?.tool || 'unknown'} ｜ ${item?.success ? '成功' : '失败'}`, children: (<div><div><b>状态：</b>{item?.success ? '成功' : '失败'}</div><div><b>结果：</b><pre style={{ whiteSpace: 'pre-wrap', marginTop: 8 }}>{JSON.stringify(item?.result || {}, null, 2)}</pre></div>{!item?.success ? <Alert type="error" showIcon message="执行失败" description={item?.error || '未知错误'} /> : null}</div>) }))} />}
           </Card>
         </Col>

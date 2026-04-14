@@ -27,7 +27,7 @@ const getWarnings = async (req: Request, res: Response) => {
 
     // 时间范围筛选
     if (startDate && endDate) {
-      whereClause.createdAt = {
+      whereClause.created_at = {
         [Op.between]: [new Date(startDate as string), new Date(endDate as string)]
       }
     }
@@ -112,7 +112,7 @@ const getWarningById = async (req: Request, res: Response) => {
           as: 'actionLogs',
           include: [{ model: User, as: 'operator', attributes: ['id', 'realName'] }],
           separate: true,
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         }
       ]
     })
@@ -402,7 +402,7 @@ const getWarningStats = async (req: Request, res: Response) => {
       where: {
         ...dateCondition,
         status: { [Op.in]: ['pending', 'processing'] },
-        createdAt: {
+        created_at: {
           [Op.lt]: new Date(Date.now() - 24 * 60 * 60 * 1000)
         }
       }

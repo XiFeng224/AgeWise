@@ -339,7 +339,11 @@ class AgentVNextService {
           sourceAnswer: input.sourceAnswer || '',
           sourceSuggestedAction: input.sourceSuggestedAction || []
         }
-      })
+      }).catch((error: any) => ({
+        answer: '模型摘要生成失败，已启用兜底规划。',
+        summary: '模型摘要生成失败，已启用兜底规划。',
+        _meta: { source: 'fallback', message: error?.message || 'unknown' }
+      }))
 
       decision = await aiAgentService.fullDecision({
         triageInput: {
@@ -367,7 +371,15 @@ class AgentVNextService {
           sourceSuggestedAction: input.sourceSuggestedAction || [],
           modelPreference
         }
-      })
+      }).catch((error: any) => ({
+        triage: { actions: ['先完成关键体征复测并评估风险等级'] },
+        dispatch: { steps: ['安排值班人员执行首轮处置', '2小时内完成复测复核'] },
+        copilot: {
+          summary: '模型服务暂时不可用，已给出规则化兜底处置建议。',
+          communication: '已启动基础处置流程，请保持电话畅通。',
+          _meta: { source: 'fallback', message: error?.message || 'unknown' }
+        }
+      }))
       decision.copilot = {
         ...decision.copilot,
         summary: qwenSummary?.answer || qwenSummary?.summary || decision?.copilot?.summary,
@@ -379,7 +391,8 @@ class AgentVNextService {
         dispatch: { steps: ['安排值班人员执行首轮处置', '2小时内完成复测复核'] },
         copilot: {
           summary: '模型服务暂时不可用，已给出规则化兜底处置建议。',
-          communication: '已启动基础处置流程，请保持电话畅通。'
+          communication: '已启动基础处置流程，请保持电话畅通。',
+          _meta: { source: 'fallback' }
         }
       }
     }

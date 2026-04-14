@@ -51,6 +51,7 @@ const AgentVNext: React.FC = () => {
   const [lastTraceId, setLastTraceId] = useState<string>('')
   const [taskStatus, setTaskStatus] = useState<TaskStatus>('idle')
   const [queue, setQueue] = useState<QueueTask[]>([])
+  const [queueCollapsed, setQueueCollapsed] = useState<boolean>(false)
   const [autoPilot, setAutoPilot] = useState<boolean>(true)
   const [maxRetries, setMaxRetries] = useState<number>(2)
   const [runtimeTaskId, setRuntimeTaskId] = useState<string>('')
@@ -342,30 +343,38 @@ const AgentVNext: React.FC = () => {
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col xs={24} lg={5}>
-          <Card title="会话列表" style={{ borderRadius: 18, height: '100%' }}>
-            <List
-              dataSource={queue}
-              locale={{ emptyText: '暂无会话' }}
-              renderItem={(q, index) => (
-                <List.Item style={{
-                  padding: '10px 12px',
-                  marginBottom: 8,
-                  borderRadius: 12,
-                  border: q.id === runtimeTaskId ? '1px solid #1890ff' : '1px solid #f0f0f0',
-                  background: q.id === runtimeTaskId ? '#e6f4ff' : '#fff'
-                }}>
-                  <Space direction="vertical" size={2} style={{ width: '100%' }}>
-                    <Space style={{ justifyContent: 'space-between', width: '100%' }}>
-                      <Text strong>{index === 0 ? '当前会话' : `历史会话 ${index}`}</Text>
-                      <Tag color={statusMeta[q.status].color}>{statusMeta[q.status].text}</Tag>
+          <Card
+            title="会话列表"
+            style={{ borderRadius: 18, height: '100%' }}
+            extra={<Button size="small" onClick={() => setQueueCollapsed((v) => !v)}>{queueCollapsed ? '展开' : '收起'}</Button>}
+          >
+            {queueCollapsed ? (
+              <Text type="secondary">会话列表已收起，点击右上角展开查看。</Text>
+            ) : (
+              <List
+                dataSource={queue}
+                locale={{ emptyText: '暂无会话' }}
+                renderItem={(q, index) => (
+                  <List.Item style={{
+                    padding: '10px 12px',
+                    marginBottom: 8,
+                    borderRadius: 12,
+                    border: q.id === runtimeTaskId ? '1px solid #1890ff' : '1px solid #f0f0f0',
+                    background: q.id === runtimeTaskId ? '#e6f4ff' : '#fff'
+                  }}>
+                    <Space direction="vertical" size={2} style={{ width: '100%' }}>
+                      <Space style={{ justifyContent: 'space-between', width: '100%' }}>
+                        <Text strong>{index === 0 ? '当前会话' : `历史会话 ${index}`}</Text>
+                        <Tag color={statusMeta[q.status].color}>{statusMeta[q.status].text}</Tag>
+                      </Space>
+                      <Text>{q.title}</Text>
+                      <Text type="secondary">{q.createdAt}</Text>
+                      {q.traceId ? <Text type="secondary">{q.traceId}</Text> : null}
                     </Space>
-                    <Text>{q.title}</Text>
-                    <Text type="secondary">{q.createdAt}</Text>
-                    {q.traceId ? <Text type="secondary">{q.traceId}</Text> : null}
-                  </Space>
-                </List.Item>
-              )}
-            />
+                  </List.Item>
+                )}
+              />
+            )}
           </Card>
         </Col>
         <Col xs={24} lg={14}>

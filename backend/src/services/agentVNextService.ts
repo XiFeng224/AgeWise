@@ -124,7 +124,7 @@ class AgentVNextService {
 
     const latest = await Notification.findOne({
       where: { type: 'agent_policy' },
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     })
 
     const parsed = this.safeParseJSON<{ note?: string; policyByMode?: PolicyByMode }>(latest?.content)
@@ -154,10 +154,10 @@ class AgentVNextService {
 
     const [elderly, healthData, warnings, serviceRequests, timelineNotifications, providers] = await Promise.all([
       Elderly.findByPk(elderlyId),
-      HealthData.findAll({ where: { elderlyId, createdAt: { [Op.gte]: since24h } }, order: [['createdAt', 'DESC']], limit: 80 }),
-      Warning.findAll({ where: { elderlyId }, order: [['createdAt', 'DESC']], limit: 20 }),
-      ServiceRequest.findAll({ where: { elderlyId }, order: [['createdAt', 'DESC']], limit: 20 }),
-      Notification.findAll({ where: { relatedId: elderlyId }, order: [['createdAt', 'DESC']], limit: 30 }),
+      HealthData.findAll({ where: { elderlyId, created_at: { [Op.gte]: since24h } }, order: [['created_at', 'DESC']], limit: 80 }),
+      Warning.findAll({ where: { elderlyId }, order: [['created_at', 'DESC']], limit: 20 }),
+      ServiceRequest.findAll({ where: { elderlyId }, order: [['created_at', 'DESC']], limit: 20 }),
+      Notification.findAll({ where: { relatedId: elderlyId }, order: [['created_at', 'DESC']], limit: 30 }),
       ServiceProvider.findAll({ where: { availability: true }, attributes: ['id', 'name', 'type', 'skills', 'rating'], limit: 15 })
     ])
 
@@ -172,7 +172,7 @@ class AgentVNextService {
         value: item.value,
         value2: item.value2,
         unit: item.unit,
-        at: item.createdAt,
+        at: item.created_at,
         isAbnormal: item.isAbnormal
       })
       return acc
@@ -195,7 +195,7 @@ class AgentVNextService {
         title: n.title,
         content: n.content,
         type: n.type,
-        at: n.createdAt
+        at: n.created_at
       })),
       availableProviders: providers
     }
@@ -230,7 +230,7 @@ class AgentVNextService {
             { description: { [Op.like]: like } }
           ]
         },
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit: 5
       }),
       ServiceRequest.findAll({
@@ -241,7 +241,7 @@ class AgentVNextService {
             { description: { [Op.like]: like } }
           ]
         },
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit: 5
       }),
       ServiceRecord.findAll({
@@ -252,7 +252,7 @@ class AgentVNextService {
             { notes: { [Op.like]: like } }
           ]
         },
-        order: [['createdAt', 'DESC']],
+        order: [['created_at', 'DESC']],
         limit: 5
       })
     ])
@@ -263,20 +263,20 @@ class AgentVNextService {
         riskLevel: w.riskLevel,
         title: w.title,
         description: w.description,
-        at: w.createdAt
+        at: w.created_at
       })),
       serviceRequests: serviceRequests.map((s: any) => ({
         requestType: s.requestType,
         priority: s.priority,
         description: s.description,
         status: s.status,
-        at: s.createdAt
+        at: s.created_at
       })),
       serviceRecords: serviceRecords.map((r: any) => ({
         serviceType: r.serviceType,
         description: r.description,
         notes: r.notes,
-        at: r.createdAt
+        at: r.created_at
       }))
     }
   }
@@ -666,9 +666,9 @@ class AgentVNextService {
     const rows = await ServiceRecord.findAll({
       where: {
         serviceType: 'agent_outcome',
-        createdAt: { [Op.gte]: since }
+        created_at: { [Op.gte]: since }
       },
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: 1000
     })
 

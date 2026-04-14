@@ -77,7 +77,7 @@ class AIAgentService {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
-        timeout: 15000
+        timeout: 30000
       }
     )
 

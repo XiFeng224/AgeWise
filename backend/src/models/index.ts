@@ -205,15 +205,15 @@ interface WarningAttributes {
   triggerData: object
   status: 'pending' | 'processing' | 'resolved'
   handlerId?: number
-  handleTime?: Date
-  handleNotes?: string
+  handle_time?: Date
+  handle_notes?: string
   followUpAt?: Date
   followUpResult?: string
-  createdAt: Date
-  updatedAt: Date
+  created_at: Date
+  updated_at: Date
 }
 
-interface WarningCreationAttributes extends Optional<WarningAttributes, 'id' | 'status' | 'createdAt' | 'updatedAt'> {}
+interface WarningCreationAttributes extends Optional<WarningAttributes, 'id' | 'status' | 'created_at' | 'updated_at'> {}
 
 class Warning extends Model<WarningAttributes, WarningCreationAttributes> {
   public id!: number
@@ -225,13 +225,13 @@ class Warning extends Model<WarningAttributes, WarningCreationAttributes> {
   public triggerData!: any
   public status!: 'pending' | 'processing' | 'resolved'
   public handlerId?: number
-  public handleTime?: Date
-  public handleNotes?: string
+  public handle_time?: Date
+  public handle_notes?: string
   public followUpAt?: Date
   public followUpResult?: string
   
-  public readonly createdAt!: Date
-  public readonly updatedAt!: Date
+  public readonly created_at!: Date
+  public readonly updated_at!: Date
 }
 
 Warning.init({
@@ -280,10 +280,10 @@ Warning.init({
       key: 'id'
     }
   },
-  handleTime: {
+  handle_time: {
     type: DataTypes.DATE
   },
-  handleNotes: {
+  handle_notes: {
     type: DataTypes.TEXT
   },
   followUpAt: {
@@ -292,12 +292,12 @@ Warning.init({
   followUpResult: {
     type: DataTypes.TEXT
   },
-  createdAt: {
+  created_at: {
     type: DataTypes.DATE,
     allowNull: false,
     defaultValue: DataTypes.NOW
   },
-  updatedAt: {
+  updated_at: {
     type: DataTypes.DATE,
     allowNull: false,
     defaultValue: DataTypes.NOW
@@ -1098,11 +1098,11 @@ interface ServiceRequestAttributes {
   assignedAt?: Date
   completedAt?: Date
   notes?: string
-  createdAt: Date
-  updatedAt: Date
+  created_at: Date
+  updated_at: Date
 }
 
-interface ServiceRequestCreationAttributes extends Optional<ServiceRequestAttributes, 'id' | 'status' | 'requestedAt' | 'createdAt' | 'updatedAt'> {}
+interface ServiceRequestCreationAttributes extends Optional<ServiceRequestAttributes, 'id' | 'status' | 'requestedAt' | 'created_at' | 'updated_at'> {}
 
 class ServiceRequest extends Model<ServiceRequestAttributes, ServiceRequestCreationAttributes> {
   public id!: number
@@ -1118,8 +1118,8 @@ class ServiceRequest extends Model<ServiceRequestAttributes, ServiceRequestCreat
   public assignedAt?: Date
   public completedAt?: Date
   public notes?: string
-  public readonly createdAt!: Date
-  public readonly updatedAt!: Date
+  public readonly created_at!: Date
+  public readonly updated_at!: Date
 }
 
 ServiceRequest.init({
@@ -1182,12 +1182,12 @@ ServiceRequest.init({
   notes: {
     type: DataTypes.TEXT
   },
-  createdAt: {
+  created_at: {
     type: DataTypes.DATE,
     allowNull: false,
     defaultValue: DataTypes.NOW
   },
-  updatedAt: {
+  updated_at: {
     type: DataTypes.DATE,
     allowNull: false,
     defaultValue: DataTypes.NOW

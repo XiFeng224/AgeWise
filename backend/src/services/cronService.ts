@@ -80,7 +80,7 @@ export class CronService {
     const deletedCount = await Warning.destroy({
       where: {
         status: 'resolved',
-        handleTime: { [Op.lt]: thirtyDaysAgo }
+        handle_time: { [Op.lt]: thirtyDaysAgo }
       }
     })
 

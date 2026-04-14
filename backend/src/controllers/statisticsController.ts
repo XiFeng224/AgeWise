@@ -48,7 +48,7 @@ const getStatistics = async (req: Request, res: Response) => {
         Elderly.count({ where: { riskLevel: 'high' } }),
         Warning.count({
           where: {
-            createdAt: {
+            created_at: {
               [Op.gte]: new Date(new Date().setHours(0, 0, 0, 0))
             }
           }

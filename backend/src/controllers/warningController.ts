@@ -27,7 +27,7 @@ const getWarnings = async (req: Request, res: Response) => {
 
     // 时间范围筛选
     if (startDate && endDate) {
-      whereClause.createdAt = {
+      whereClause.created_at = {
         [Op.between]: [new Date(startDate as string), new Date(endDate as string)]
       }
     }
@@ -112,7 +112,7 @@ const getWarningById = async (req: Request, res: Response) => {
           as: 'actionLogs',
           include: [{ model: User, as: 'operator', attributes: ['id', 'realName'] }],
           separate: true,
-          order: [['createdAt', 'DESC']]
+          order: [['created_at', 'DESC']]
         }
       ]
     })
@@ -302,7 +302,7 @@ const getWarningStats = async (req: Request, res: Response) => {
       const start = new Date(startDate as string)
       const end = new Date(endDate as string)
       if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && start <= end) {
-        dateCondition.createdAt = {
+        dateCondition.created_at = {
           [Op.between]: [start, end]
         }
       }
@@ -355,16 +355,16 @@ const getWarningStats = async (req: Request, res: Response) => {
 
     const trendRows = await Warning.findAll({
       where: {
-        createdAt: {
+        created_at: {
           [Op.gte]: sevenDaysAgo
         }
       },
       attributes: [
-        [fn('DATE', col('created_at')), 'date'],
-        [fn('COUNT', col('id')), 'count']
+        [fn('DATE', 'created_at'), 'date'],
+        [fn('COUNT', 'id'), 'count']
       ],
-      group: [fn('DATE', col('created_at'))],
-      order: [[fn('DATE', col('created_at')), 'ASC']],
+      group: [fn('DATE', 'created_at')],
+      order: [[fn('DATE', 'created_at'), 'ASC']],
       raw: true
     }) as unknown as Array<{ date: string; count: number }>
 
@@ -384,16 +384,16 @@ const getWarningStats = async (req: Request, res: Response) => {
       where: {
         ...dateCondition,
         status: 'resolved',
-        handleTime: { [Op.not]: null }
+        handle_time: { [Op.not]: null }
       },
-      attributes: ['createdAt', 'handleTime'],
+      attributes: ['created_at', 'handle_time'],
       raw: true
-    }) as unknown as Array<{ createdAt: string; handleTime: string }>
+    }) as unknown as Array<{ created_at: string; handle_time: string }>
 
     const avgHandleHours = resolvedWithDuration.length > 0
       ? Number((resolvedWithDuration.reduce((sum, item) => {
-          const start = new Date((item as any).createdAt || (item as any).createdAt).getTime()
-          const end = new Date((item as any).handleTime).getTime()
+          const start = new Date((item as any).created_at).getTime()
+          const end = new Date((item as any).handle_time).getTime()
           return sum + Math.max(0, end - start)
         }, 0) / resolvedWithDuration.length / (1000 * 60 * 60)).toFixed(2))
       : 0
@@ -402,7 +402,7 @@ const getWarningStats = async (req: Request, res: Response) => {
       where: {
         ...dateCondition,
         status: { [Op.in]: ['pending', 'processing'] },
-        createdAt: {
+        created_at: {
           [Op.lt]: new Date(Date.now() - 24 * 60 * 60 * 1000)
         }
       }

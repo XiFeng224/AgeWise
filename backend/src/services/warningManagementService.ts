@@ -419,8 +419,8 @@ class WarningManagementService {
       await warning.update({
         status: 'processing',
         handlerId,
-        handleNotes,
-        handleTime: new Date()
+        handle_notes: handleNotes,
+        handle_time: new Date()
       })
 
       return warning
@@ -442,8 +442,8 @@ class WarningManagementService {
       await warning.update({
         status: 'resolved',
         handlerId,
-        handleNotes: warning.handleNotes + '\n' + resolutionNotes,
-        handleTime: new Date()
+        handle_notes: (warning.handle_notes || '') + '\n' + resolutionNotes,
+        handle_time: new Date()
       })
 
       return warning

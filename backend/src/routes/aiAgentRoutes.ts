@@ -82,9 +82,9 @@ router.post('/demo/run', authenticate, async (req, res) => {
         elderlyId: elderly.id,
         requestType: 'AI演示-紧急关怀',
         status: { [Op.in]: ['pending', 'assigned'] },
-        createdAt: { [Op.gte]: new Date(Date.now() - 2 * 60 * 60 * 1000) }
+        created_at: { [Op.gte]: new Date(Date.now() - 2 * 60 * 60 * 1000) }
       },
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     })
 
     // 1) 注入高危数据

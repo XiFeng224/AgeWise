@@ -305,7 +305,8 @@ Warning.init({
 }, {
   sequelize: database,
   tableName: 'warnings',
-  modelName: 'Warning'
+  modelName: 'Warning',
+  underscored: true
 })
 
 // 服务记录模型

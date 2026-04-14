@@ -66,6 +66,8 @@ DB_USER=root
 DB_PASSWORD=your_password
 JWT_SECRET=your_secret
 DASHSCOPE_API_KEY=your_qwen_key
+DEEPSEEK_API_KEY=your_deepseek_key
+DEEPSEEK_BASE_URL=https://api.deepseek.com/chat/completions
 ```
 
 ### 前端常用配置

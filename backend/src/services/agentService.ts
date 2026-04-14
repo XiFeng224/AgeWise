@@ -5,6 +5,8 @@ import path from 'path'
 
 const QWEN_API_KEY = process.env.DASHSCOPE_API_KEY || process.env.QWEN_API_KEY
 const QWEN_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions'
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY
+const DEEPSEEK_URL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/chat/completions'
 
 class AgentService {
   /**
@@ -236,9 +238,47 @@ class AgentService {
   }
 
   private async callDeepSeekAgent(query: string, context: { deepThink: boolean; searchMode: boolean }): Promise<any> {
-    return this.callQwenAgent(query, context)
-      .then((result) => result ? { ...result, modelSource: 'deepseek' } : null)
-      .catch(() => null)
+    try {
+      if (!DEEPSEEK_API_KEY) return null
+
+      const response = await fetch(DEEPSEEK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${DEEPSEEK_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            {
+              role: 'system',
+              content: '你是社区养老场景问答与任务路由器。请输出JSON：{"intent":"query_elderly_info|query_health_status|query_service_records|query_warnings|statistical_analysis|care_advice|risk_judgement|task_action","entities":{},"sql_hint":"","needs_follow_up":true,"follow_up_type":"answer|task|both","answer_style":"brief|normal","confidence":0-1}。若问题是建议/判断/解释类，优先返回 care_advice 或 risk_judgement；若需要执行则可返回 task_action。只输出JSON。'
+            },
+            {
+              role: 'user',
+              content: query
+            }
+          ],
+          temperature: context.deepThink ? 0.2 : 0.1,
+          top_p: context.searchMode ? 0.9 : 0.8
+        })
+      })
+
+      if (!response.ok) return null
+      const data: any = await response.json()
+      const content = data?.choices?.[0]?.message?.content
+      if (!content) return null
+      try {
+        const parsed = JSON.parse(content)
+        return this.normalizeQwenResult(parsed, query)
+      } catch {
+        const match = content.match(/\{[\s\S]*\}/)
+        return match ? this.normalizeQwenResult(JSON.parse(match[0]), query) : null
+      }
+    } catch (error) {
+      console.error('调用DeepSeek失败:', error)
+      return null
+    }
   }
 
   private async callMoonshotAgent(query: string, context: { deepThink: boolean; searchMode: boolean }): Promise<any> {

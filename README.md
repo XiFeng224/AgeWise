@@ -50,7 +50,7 @@
 ### 技术栈
 - 前端：React 18、TypeScript、Vite、Ant Design、ECharts、React Router
 - 后端：Node.js、Express、TypeScript、Sequelize
-- AI：千问 / Python NLP Agent / 本地规则兜底
+- AI：千问 / DeepSeek / Python NLP Agent / 本地规则兜底
 - 数据：MySQL
 
 ---

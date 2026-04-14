@@ -205,16 +205,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </Sider>
       <AntLayout>
         <Header className="layout-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="layout-header-left">
             <Button
               type="text"
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => setCollapsed(!collapsed)}
               className="layout-header-toggle"
             />
-            <div>
-              <Text strong style={{ display: 'block', color: '#31506e' }}>银龄智护 Agent 平台</Text>
-              <Text type="secondary" style={{ fontSize: 12 }}>Agent 闭环编排 · 问答 · 执行 · 追踪</Text>
+            <div className="layout-title-group">
+              <Text strong className="layout-title">银龄智护 Agent 平台</Text>
+              <Text type="secondary" className="layout-subtitle">Agent 闭环编排 · 问答 · 执行 · 追踪</Text>
             </div>
           </div>
           <div className="layout-header-right">

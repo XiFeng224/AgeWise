@@ -402,6 +402,11 @@ const AgentVNext: React.FC = () => {
                   </Space>
                   <Card size="small" style={{ marginTop: 8, borderRadius: 12, background: '#fafcff' }}>
                     <Space direction="vertical" style={{ width: '100%' }}>
+                      <Space wrap>
+                        <Tag color="processing">模型规划</Tag>
+                        <Tag color={plan?.cache?.hit ? 'success' : 'blue'}>{plan?.cache?.hit ? '缓存命中' : '实时生成'}</Tag>
+                        <Tag color={modelPreference === 'deepseek' ? 'purple' : 'geekblue'}>当前偏好：{modelPreference === 'qwen' ? '千问' : modelPreference === 'deepseek' ? 'DeepSeek' : '规则兜底'}</Tag>
+                      </Space>
                       <Text strong>运行台大模型规划结果</Text>
                       <Text type="secondary">{plan?.planner?.summary || '尚未生成规划，请先启动任务'}</Text>
                     </Space>
@@ -450,25 +455,46 @@ const AgentVNext: React.FC = () => {
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={12}>
-          <Card title="规划结果（规划层）" style={{ marginBottom: 16, borderRadius: 16 }}>
-            <Descriptions bordered size="small" column={1}>
-              <Descriptions.Item label="计划摘要">{plan?.planner?.summary || plan?.summary || '-'}</Descriptions.Item>
-              <Descriptions.Item label="阶段计划">{(plan?.planner?.timeline || []).map((t: any) => `${t.window}: ${(t.actions || []).join('；')}`).join(' ｜ ') || '-'}</Descriptions.Item>
-            </Descriptions>
+          <Card title="规划结果（规划层）" style={{ marginBottom: 16, borderRadius: 16, minHeight: 220 }}>
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <Space wrap>
+                <Tag color={plan?.cache?.hit ? 'success' : 'blue'}>{plan?.cache?.hit ? '缓存命中' : '实时规划'}</Tag>
+                <Tag color={taskStatus === 'failed' ? 'error' : taskStatus === 'pending_approval' ? 'warning' : 'processing'}>{statusMeta[taskStatus].text}</Tag>
+                {lastTraceId ? <Tag color="cyan">traceId: {lastTraceId}</Tag> : null}
+              </Space>
+              <Descriptions bordered size="small" column={1}>
+                <Descriptions.Item label="计划摘要">{plan?.planner?.summary || plan?.summary || '-'}</Descriptions.Item>
+                <Descriptions.Item label="阶段计划">{(plan?.planner?.timeline || []).map((t: any) => `${t.window}: ${(t.actions || []).join('；')}`).join(' ｜ ') || '-'}</Descriptions.Item>
+                <Descriptions.Item label="工具建议">{(plan?.planner?.toolCalls || plan?.plan?.toolCalls || []).length ? (plan?.planner?.toolCalls || plan?.plan?.toolCalls || []).map((t: any) => t.tool).join('、') : '暂无工具建议'}</Descriptions.Item>
+              </Descriptions>
+            </Space>
           </Card>
         </Col>
         <Col span={12}>
-          <Card title="运行阶段摘要" style={{ marginBottom: 16, borderRadius: 16 }}>
-            <Timeline
-              items={[
-                { color: 'blue', children: '感知层：输入任务、选择老人、设置策略' },
-                { color: 'gold', children: '规划层：Agent 生成计划并等待审批' },
-                { color: 'green', children: '行动层：审批后调用工具执行闭环' },
-                { color: 'purple', children: '记忆层：回写结果并更新策略' }
-              ]}
-            />
+          <Card title="运行阶段摘要" style={{ marginBottom: 16, borderRadius: 16, minHeight: 220 }}>
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <Space wrap>
+                <Tag color="blue">感知</Tag>
+                <Tag color="gold">规划</Tag>
+                <Tag color="green">行动</Tag>
+                <Tag color="purple">记忆</Tag>
+              </Space>
+              <Timeline
+                items={[
+                  { color: 'blue', children: '感知层：输入任务、选择老人、设置策略' },
+                  { color: 'gold', children: '规划层：Agent 生成计划并等待审批' },
+                  { color: 'green', children: '行动层：审批后调用工具执行闭环' },
+                  { color: 'purple', children: '记忆层：回写结果并更新策略' }
+                ]}
+              />
+            </Space>
           </Card>
-          <Card title="结果回写与策略更新" style={{ borderRadius: 16 }}>
+        </Col>
+      </Row>
+
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col span={12}>
+          <Card title="结果回写与策略更新" style={{ borderRadius: 16, minHeight: 220 }}>
             <Descriptions bordered size="small" column={1}>
               <Descriptions.Item label="记录ID">{outcomeRes?.id || '-'}</Descriptions.Item>
               <Descriptions.Item label="服务类型">{outcomeRes?.serviceType || '-'}</Descriptions.Item>
@@ -480,15 +506,15 @@ const AgentVNext: React.FC = () => {
             </Descriptions>
           </Card>
         </Col>
-      </Row>
-
-      <Row gutter={16}>
         <Col span={12}>
-          <Card title="执行失败项（高亮）" style={{ borderRadius: 16 }}>
+          <Card title="执行失败项（高亮）" style={{ borderRadius: 16, minHeight: 220 }}>
             {failedExecutions.length === 0 ? <Text type="secondary">当前无失败项</Text> : failedExecutions.map((item: any, idx: number) => <Alert key={idx} type="error" showIcon style={{ marginBottom: 8 }} message={`工具：${item.tool || 'unknown'}`} description={item.error || '执行失败'} />)}
           </Card>
         </Col>
-        <Col span={12}>
+      </Row>
+
+      <Row gutter={16}>
+        <Col span={24}>
           <Card title="工具执行日志（可展开）" style={{ marginBottom: 16, borderRadius: 16 }}>
             {(toolExecutions || []).length === 0 ? <Text type="secondary">暂无工具执行记录，请先审批并执行任务</Text> : <Collapse items={toolExecutions.map((item: any, idx: number) => ({ key: String(idx + 1), label: `${item?.tool || 'unknown'} ｜ ${item?.success ? '成功' : '失败'}`, children: (<div><div><b>状态：</b>{item?.success ? '成功' : '失败'}</div><div><b>结果：</b><pre style={{ whiteSpace: 'pre-wrap', marginTop: 8 }}>{JSON.stringify(item?.result || {}, null, 2)}</pre></div>{!item?.success ? <Alert type="error" showIcon message="执行失败" description={item?.error || '未知错误'} /> : null}</div>) }))} />}
           </Card>

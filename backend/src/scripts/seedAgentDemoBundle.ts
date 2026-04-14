@@ -62,6 +62,50 @@ const templates: BundleTemplate[] = [
     requestType: '康复活动干预',
     priority: 'medium',
     requiredSkills: '康复指导,护理随访,情绪支持'
+  },
+  {
+    label: '跌倒风险+低活动',
+    points: [
+      { dataType: 'steps', value: 120 },
+      { dataType: 'heart_rate', value: 126 },
+      { dataType: 'sleep', value: 11.3 }
+    ],
+    requestType: '跌倒风险核查',
+    priority: 'high',
+    requiredSkills: '跌倒评估,上门核查,护理随访'
+  },
+  {
+    label: '血氧偏低+呼吸异常',
+    points: [
+      { dataType: 'temperature', value: 37.4 },
+      { dataType: 'heart_rate', value: 116 },
+      { dataType: 'blood_pressure', value: 138, value2: 90 }
+    ],
+    requestType: '呼吸风险评估',
+    priority: 'high',
+    requiredSkills: '呼吸评估,医护值守,家属沟通'
+  },
+  {
+    label: '服药漏服+血压波动',
+    points: [
+      { dataType: 'blood_pressure', value: 154, value2: 98 },
+      { dataType: 'heart_rate', value: 104 },
+      { dataType: 'sleep', value: 6.1 }
+    ],
+    requestType: '服药依从性跟进',
+    priority: 'medium',
+    requiredSkills: '用药管理,慢病护理,家属沟通'
+  },
+  {
+    label: '情绪低落+活动减少',
+    points: [
+      { dataType: 'sleep', value: 5.2 },
+      { dataType: 'steps', value: 510 },
+      { dataType: 'heart_rate', value: 98 }
+    ],
+    requestType: '心理健康随访',
+    priority: 'medium',
+    requiredSkills: '心理支持,随访沟通,社工协作'
   }
 ]
 

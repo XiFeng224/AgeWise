@@ -23,6 +23,10 @@ interface RuntimeTask {
     riskLevel: 'low' | 'medium' | 'high'
     module: '护理' | '医护' | '后勤' | '收费' | '接待'
     autoExecute?: boolean
+    modelPreference?: 'auto' | 'qwen' | 'deepseek' | 'rule'
+    sourceQuery?: string
+    sourceAnswer?: string
+    sourceSuggestedAction?: string[]
   }
   plan?: any
   autonomous?: any

@@ -118,7 +118,12 @@ class AgentOrchestratorService {
       urgentNotifications,
       pendingServiceRequests,
       overdueCount,
-      totalToHandle: pendingWarnings + processingWarnings + urgentNotifications + pendingServiceRequests
+      totalToHandle: pendingWarnings + processingWarnings + urgentNotifications + pendingServiceRequests,
+      pendingTaskCount: allTasks.filter(t => t.status === 'pending').length,
+      assignedTaskCount: allTasks.filter(t => t.status === 'assigned').length,
+      processingTaskCount: allTasks.filter(t => t.status === 'processing').length,
+      highRiskTaskCount: allTasks.filter(t => t.priority === 'high').length,
+      avgEventScore: allTasks.length ? Number((allTasks.reduce((sum, t) => sum + t.eventScore, 0) / allTasks.length).toFixed(1)) : 0
     }
     this.setCache(key, payload, 8000)
     return payload
@@ -170,6 +175,7 @@ class AgentOrchestratorService {
         description: item.description,
         priority: item.riskLevel,
         status: item.status,
+        source: '风险预警',
         suggestedAction: slaStatus === 'overdue'
           ? `已超时，建议升级给${escalationTarget}并立即回访；当前建议路由：${duty.suggestedRole}`
           : `建议路由：${duty.suggestedRole}。${item.riskLevel === 'high' ? '立即联系家属并安排就医。' : '尽快复核数据并安排随访。'}`,
@@ -208,6 +214,7 @@ class AgentOrchestratorService {
         description: item.description,
         priority: item.priority,
         status: item.status,
+        source: '手动创建',
         suggestedAction: slaStatus === 'overdue'
           ? `服务已超时，建议升级给${escalationTarget}；当前建议路由：${duty.suggestedRole}`
           : item.status === 'pending' ? `为该请求匹配${duty.suggestedRole}。` : '跟进执行进度并反馈结果。',

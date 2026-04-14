@@ -74,9 +74,9 @@
   backdrop-filter: blur(10px);
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  padding: 18px 20px 14px;
-  min-height: 96px;
+  align-items: center;
+  padding: 22px 20px 18px;
+  min-height: 112px;
 }
 
 .layout-header-toggle {
@@ -103,7 +103,7 @@
   flex-direction: column;
   justify-content: center;
   line-height: 1.15;
-  padding-top: 10px;
+  padding-top: 18px;
 }
 
 .layout-title {

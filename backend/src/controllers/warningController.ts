@@ -360,11 +360,11 @@ const getWarningStats = async (req: Request, res: Response) => {
         }
       },
       attributes: [
-        [fn('DATE', col('createdAt')), 'date'],
+        [fn('DATE', col('created_at')), 'date'],
         [fn('COUNT', col('id')), 'count']
       ],
-      group: [fn('DATE', col('createdAt'))],
-      order: [[fn('DATE', col('createdAt')), 'ASC']],
+      group: [fn('DATE', col('created_at'))],
+      order: [[fn('DATE', col('created_at')), 'ASC']],
       raw: true
     }) as unknown as Array<{ date: string; count: number }>
 

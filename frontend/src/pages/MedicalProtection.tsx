@@ -1,24 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Layout, 
-  Card, 
-  Typography, 
-  Row, 
-  Col, 
-  Input, 
-  Select, 
-  Tag, 
-  Spin, 
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Layout,
+  Card,
+  Typography,
+  Row,
+  Col,
+  Input,
+  Select,
+  Tag,
+  Spin,
   message,
   Button,
   Space
 } from 'antd';
-import { 
-  PlayCircleOutlined, 
-  SearchOutlined, 
-  FilterOutlined, 
-  ClockCircleOutlined, 
-  UserOutlined, 
+import {
+  PlayCircleOutlined,
+  SearchOutlined,
+  FilterOutlined,
+  ClockCircleOutlined,
+  UserOutlined,
   HeartOutlined,
   PauseCircleOutlined,
   ReloadOutlined
@@ -43,135 +43,113 @@ interface VideoItem {
   tags: string[];
 }
 
-const MedicalProtection: React.FC = () => {
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const [loading, setLoading] = useState<boolean>(true);
-  const [videos, setVideos] = useState<VideoItem[]>([]);
-  const [filteredVideos, setFilteredVideos] = useState<VideoItem[]>([]);
-  const [searchText, setSearchText] = useState<string>('');
-  const [category, setCategory] = useState<string>('all');
-  const [selectedTag, setSelectedTag] = useState<string>('all');
-  const [activeVideo, setActiveVideo] = useState<VideoItem | null>(null);
-  const [playing, setPlaying] = useState(false);
+const mockVideos: VideoItem[] = [
+  {
+    id: '1',
+    title: '中国老年人日常防护指南',
+    description: '由中国疾控中心专家讲解，详细介绍老年人在日常生活中的防护措施，包括个人卫生、饮食健康等方面的注意事项，符合国内老年人的生活习惯。',
+    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20health%20protection%20guide%20medical%20video%20cover%20with%20Chinese%20doctor%20and%20elderly%20people&image_size=landscape_16_9',
+    duration: '08:45',
+    views: 5250,
+    likes: 389,
+    author: '中国疾控中心',
+    category: '日常防护',
+    tags: ['日常防护', '个人卫生', '饮食健康', '中国疾控中心']
+  },
+  {
+    id: '2',
+    title: '老年人常见疾病预防 - 中国专家解读',
+    description: '由北京协和医院专家讲解，针对中国老年人常见疾病的预防方法，包括高血压、糖尿病、心脑血管疾病等的预防措施和饮食调理。',
+    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20disease%20prevention%20medical%20video%20cover%20with%20Beijing%20Union%20Hospital%20doctor&image_size=landscape_16_9',
+    duration: '12:30',
+    views: 8100,
+    likes: 656,
+    author: '北京协和医院',
+    category: '疾病预防',
+    tags: ['疾病预防', '高血压', '糖尿病', '北京协和医院']
+  },
+  {
+    id: '3',
+    title: '老年人急救知识 - 中国红十字会教程',
+    description: '中国红十字会官方教程，教授老年人及其家属基本的急救知识，包括心肺复苏、止血、骨折处理等紧急情况的应对方法，符合中国国情。',
+    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20first%20aid%20knowledge%20Red%20Cross%20video%20cover%20with%20Chinese%20first%20aid%20instructor&image_size=landscape_16_9',
+    duration: '15:20',
+    views: 6850,
+    likes: 534,
+    author: '中国红十字会',
+    category: '急救知识',
+    tags: ['急救知识', '心肺复苏', '止血', '中国红十字会']
+  },
+  {
+    id: '4',
+    title: '老年人用药安全 - 中国药学会指南',
+    description: '由中国药学会专家讲解，介绍老年人用药的注意事项，包括常用药物的正确服用方法、药物相互作用、副作用的识别等，针对国内常用药物。',
+    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20medication%20safety%20video%20cover%20with%20Chinese%20pharmacist%20and%20elderly%20patient&image_size=landscape_16_9',
+    duration: '10:15',
+    views: 7680,
+    likes: 412,
+    author: '中国药学会',
+    category: '用药安全',
+    tags: ['用药安全', '药物服用', '副作用', '中国药学会']
+  },
+  {
+    id: '5',
+    title: '老年人心理健康 - 北京安定医院指南',
+    description: '由北京安定医院心理专家讲解，关注老年人的心理健康，讲解如何预防和应对老年抑郁、焦虑等心理问题，符合中国老年人的心理特点。',
+    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20mental%20health%20video%20cover%20with%20Beijing%20Anding%20Hospital%20psychologist&image_size=landscape_16_9',
+    duration: '14:45',
+    views: 5320,
+    likes: 398,
+    author: '北京安定医院',
+    category: '心理健康',
+    tags: ['心理健康', '抑郁', '焦虑', '北京安定医院']
+  },
+  {
+    id: '6',
+    title: '老年人居家安全 - 中国老龄协会建议',
+    description: '中国老龄协会发布的老年人居家安全指南，讲解老年人居家环境的安全隐患及防范措施，包括跌倒预防、火灾防范、煤气安全等，适合中国家庭环境。',
+    cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20home%20safety%20video%20cover%20with%20Chinese%20senior%20citizens%20in%20home%20setting&image_size=landscape_16_9',
+    duration: '09:30',
+    views: 6450,
+    likes: 405,
+    author: '中国老龄协会',
+    category: '居家安全',
+    tags: ['居家安全', '跌倒预防', '火灾防范', '中国老龄协会']
+  }
+];
 
-  // 模拟视频数据 - 国内医疗视频
-  const mockVideos: VideoItem[] = [
-    {
-      id: '1',
-      title: '中国老年人日常防护指南',
-      description: '由中国疾控中心专家讲解，详细介绍老年人在日常生活中的防护措施，包括个人卫生、饮食健康等方面的注意事项，符合国内老年人的生活习惯。',
-      cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20health%20protection%20guide%20medical%20video%20cover%20with%20Chinese%20doctor%20and%20elderly%20people&image_size=landscape_16_9',
-      duration: '08:45',
-      views: 5250,
-      likes: 389,
-      author: '中国疾控中心',
-      category: '日常防护',
-      tags: ['日常防护', '个人卫生', '饮食健康', '中国疾控中心']
-    },
-    {
-      id: '2',
-      title: '老年人常见疾病预防 - 中国专家解读',
-      description: '由北京协和医院专家讲解，针对中国老年人常见疾病的预防方法，包括高血压、糖尿病、心脑血管疾病等的预防措施和饮食调理。',
-      cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20disease%20prevention%20medical%20video%20cover%20with%20Beijing%20Union%20Hospital%20doctor&image_size=landscape_16_9',
-      duration: '12:30',
-      views: 8100,
-      likes: 656,
-      author: '北京协和医院',
-      category: '疾病预防',
-      tags: ['疾病预防', '高血压', '糖尿病', '北京协和医院']
-    },
-    {
-      id: '3',
-      title: '老年人急救知识 - 中国红十字会教程',
-      description: '中国红十字会官方教程，教授老年人及其家属基本的急救知识，包括心肺复苏、止血、骨折处理等紧急情况的应对方法，符合中国国情。',
-      cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20first%20aid%20knowledge%20Red%20Cross%20video%20cover%20with%20Chinese%20first%20aid%20instructor&image_size=landscape_16_9',
-      duration: '15:20',
-      views: 6850,
-      likes: 534,
-      author: '中国红十字会',
-      category: '急救知识',
-      tags: ['急救知识', '心肺复苏', '止血', '中国红十字会']
-    },
-    {
-      id: '4',
-      title: '老年人用药安全 - 中国药学会指南',
-      description: '由中国药学会专家讲解，介绍老年人用药的注意事项，包括常用药物的正确服用方法、药物相互作用、副作用的识别等，针对国内常用药物。',
-      cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20medication%20safety%20video%20cover%20with%20Chinese%20pharmacist%20and%20elderly%20patient&image_size=landscape_16_9',
-      duration: '10:15',
-      views: 7680,
-      likes: 412,
-      author: '中国药学会',
-      category: '用药安全',
-      tags: ['用药安全', '药物服用', '副作用', '中国药学会']
-    },
-    {
-      id: '5',
-      title: '老年人心理健康 - 北京安定医院指南',
-      description: '由北京安定医院心理专家讲解，关注老年人的心理健康，讲解如何预防和应对老年抑郁、焦虑等心理问题，符合中国老年人的心理特点。',
-      cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20mental%20health%20video%20cover%20with%20Beijing%20Anding%20Hospital%20psychologist&image_size=landscape_16_9',
-      duration: '14:45',
-      views: 5320,
-      likes: 398,
-      author: '北京安定医院',
-      category: '心理健康',
-      tags: ['心理健康', '抑郁', '焦虑', '北京安定医院']
-    },
-    {
-      id: '6',
-      title: '老年人居家安全 - 中国老龄协会建议',
-      description: '中国老龄协会发布的老年人居家安全指南，讲解老年人居家环境的安全隐患及防范措施，包括跌倒预防、火灾防范、煤气安全等，适合中国家庭环境。',
-      cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20home%20safety%20video%20cover%20with%20Chinese%20senior%20citizens%20in%20home%20setting&image_size=landscape_16_9',
-      duration: '09:30',
-      views: 6450,
-      likes: 405,
-      author: '中国老龄协会',
-      category: '居家安全',
-      tags: ['居家安全', '跌倒预防', '火灾防范', '中国老龄协会']
+  const allTags = useMemo(() => Array.from(new Set(mockVideos.flatMap((video) => video.tags))), []);
+  const categories = useMemo(() => Array.from(new Set(mockVideos.map((video) => video.category))), []);
+  const filteredVideos = useMemo(() => {
+    let result = mockVideos;
+
+    if (category !== 'all') {
+      result = result.filter((video) => video.category === category);
     }
-  ];
 
-  // 提取所有标签
-  const allTags = Array.from(new Set(mockVideos.flatMap(video => video.tags)));
+    if (selectedTag !== 'all') {
+      result = result.filter((video) => video.tags.includes(selectedTag));
+    }
 
-  // 提取所有分类
-  const categories = Array.from(new Set(mockVideos.map(video => video.category)));
+    if (searchText) {
+      const lowerSearchText = searchText.toLowerCase();
+      result = result.filter(
+        (video) =>
+          video.title.toLowerCase().includes(lowerSearchText) ||
+          video.description.toLowerCase().includes(lowerSearchText)
+      );
+    }
+
+    return result;
+  }, [searchText, category, selectedTag]);
 
   useEffect(() => {
-    // 模拟加载数据
     const timer = setTimeout(() => {
-      setVideos(mockVideos);
-      setFilteredVideos(mockVideos);
       setLoading(false);
     }, 1000);
 
     return () => clearTimeout(timer);
   }, []);
-
-  // 处理搜索和筛选
-  useEffect(() => {
-    let result = videos;
-
-    // 按分类筛选
-    if (category !== 'all') {
-      result = result.filter(video => video.category === category);
-    }
-
-    // 按标签筛选
-    if (selectedTag !== 'all') {
-      result = result.filter(video => video.tags.includes(selectedTag));
-    }
-
-    // 按搜索文本筛选
-    if (searchText) {
-      const lowerSearchText = searchText.toLowerCase();
-      result = result.filter(video => 
-        video.title.toLowerCase().includes(lowerSearchText) ||
-        video.description.toLowerCase().includes(lowerSearchText)
-      );
-    }
-
-    setFilteredVideos(result);
-  }, [searchText, category, selectedTag, videos]);
 
   // 处理视频点击
   const handleVideoClick = (video: VideoItem) => {

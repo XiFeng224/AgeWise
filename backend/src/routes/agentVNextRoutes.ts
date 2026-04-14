@@ -153,9 +153,56 @@ router.post('/tasks', authenticate, validateBody({
   try {
     const plan = await agentVNextService.planTask(task.payload)
     task.plan = plan
+    runtimeTasks.set(taskId, task)
+    pushRuntimeEvent(taskId, { type: 'TASK_PLANNED', message: '计划生成完成', data: { summary: plan?.planner?.summary } })
+
+    if (task.payload.autoExecute) {
+      task.status = 'executing'
+      task.updatedAt = new Date().toISOString()
+      runtimeTasks.set(taskId, task)
+      pushRuntimeEvent(taskId, { type: 'TASK_EXECUTING', message: '自动执行已启动' })
+
+      const autonomous = await agentVNextService.autonomousDecision({
+        ...task.payload,
+        autoExecute: true
+      })
+
+      task.autonomous = autonomous
+      task.status = 'tracking'
+      task.updatedAt = new Date().toISOString()
+      runtimeTasks.set(taskId, task)
+      pushRuntimeEvent(taskId, { type: 'TASK_TRACKING', message: '自动执行完成，进入结果追踪' })
+
+      const outcome = await agentVNextService.recordOutcome({
+        elderlyId: task.payload.elderlyId,
+        strategyMode: task.payload.strategyMode,
+        isOverdue: false,
+        isRelapse: false,
+        familySatisfaction: 4,
+        followUpResult: '自动追踪：已完成一次闭环回写'
+      })
+
+      task.outcome = outcome
+      task.status = 'done'
+      task.updatedAt = new Date().toISOString()
+      runtimeTasks.set(taskId, task)
+      pushRuntimeEvent(taskId, { type: 'TASK_DONE', message: '任务已完成闭环', data: { outcomeId: outcome?.id } })
+
+      return sendSuccess(res, {
+        taskId,
+        status: task.status,
+        traceId: req.traceId,
+        summary: plan?.planner?.summary,
+        requiresApproval: false,
+        autonomousSummary: autonomous?.plan?.planner?.summary,
+        toolExecution: autonomous?.execution || [],
+        outcomeId: outcome?.id
+      }, '任务已创建并自动执行完成', 201)
+    }
+
     task.status = 'pending_approval'
     runtimeTasks.set(taskId, task)
-    pushRuntimeEvent(taskId, { type: 'TASK_PLANNED', message: '计划生成完成，等待审批', data: { summary: plan?.planner?.summary } })
+    pushRuntimeEvent(taskId, { type: 'TASK_PENDING_APPROVAL', message: '计划生成完成，等待审批', data: { summary: plan?.planner?.summary } })
 
     return sendSuccess(res, {
       taskId,

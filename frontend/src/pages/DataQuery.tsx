@@ -459,8 +459,6 @@ const DataQuery: React.FC = () => {
                     { label: '自动选择', value: 'auto' },
                     { label: '千问', value: 'qwen' },
                     { label: 'DeepSeek', value: 'deepseek' },
-                    { label: 'Moonshot', value: 'moonshot' },
-                    { label: 'NLP Agent', value: 'nlp' },
                     { label: '规则兜底', value: 'rule' }
                   ]}
                 />

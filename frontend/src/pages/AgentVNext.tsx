@@ -45,7 +45,6 @@ const AgentVNext: React.FC = () => {
 
   const [loading, setLoading] = useState(false)
   const [plan, setPlan] = useState<any>(null)
-  const [planningAnswer, setPlanningAnswer] = useState<string>('')
   const [autonomous, setAutonomous] = useState<any>(null)
   const [outcomeRes, setOutcomeRes] = useState<any>(null)
   const [policyRes, setPolicyRes] = useState<any>(null)
@@ -57,7 +56,7 @@ const AgentVNext: React.FC = () => {
   const [runtimeTaskId, setRuntimeTaskId] = useState<string>('')
   const [runtimeEvents, setRuntimeEvents] = useState<Array<{ at: string; type: string; message: string; data?: any }>>([])
   const [taskSource, setTaskSource] = useState<'manual' | 'query' | 'warning' | 'unknown'>('manual')
-  const [modelPreference, setModelPreference] = useState<'auto' | 'qwen' | 'deepseek' | 'moonshot' | 'nlp' | 'rule'>('auto')
+  const [modelPreference, setModelPreference] = useState<'qwen' | 'deepseek' | 'rule'>('qwen')
 
   const pollRef = useRef<number | null>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
@@ -338,8 +337,8 @@ const AgentVNext: React.FC = () => {
       </Card>
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col xs={24} lg={6}>
-          <Card title="会话列表" style={{ borderRadius: 18 }}>
+        <Col xs={24} lg={5}>
+          <Card title="会话列表" style={{ borderRadius: 18, height: '100%' }}>
             <List
               dataSource={queue}
               locale={{ emptyText: '暂无会话' }}
@@ -365,8 +364,8 @@ const AgentVNext: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Agent 主舞台" style={{ borderRadius: 18, boxShadow: '0 10px 30px rgba(15,61,53,0.06)' }}>
+        <Col xs={24} lg={14}>
+          <Card title="Agent 主舞台" style={{ borderRadius: 18, boxShadow: '0 10px 30px rgba(15,61,53,0.06)', minHeight: 620 }}>
             <Space direction="vertical" style={{ width: '100%' }} size="middle">
               <Card size="small" variant="borderless" style={{ background: 'linear-gradient(135deg, #fafbfc 0%, #eef2f6 100%)', borderRadius: 16 }}>
                 <Space wrap><Tag color="blue">感知</Tag><Tag color="gold">规划</Tag><Tag color="green">行动</Tag><Tag color="purple">记忆</Tag></Space>
@@ -374,23 +373,23 @@ const AgentVNext: React.FC = () => {
               </Card>
 
               <Card title="输入参数（感知层）" style={{ borderRadius: 16 }}>
-                <Row gutter={16}>
-                  <Col span={5}><Text>选择老人</Text><Select showSearch optionFilterProp="label" placeholder="请选择老人" style={{ width: '100%' }} value={elderlyId} onChange={(v) => setElderlyId(v)} options={elderlyOptions} /></Col>
-                  <Col span={4}><Text>策略模式</Text><Select style={{ width: '100%' }} value={strategyMode} onChange={setStrategyMode} options={[{ label: '保守', value: 'conservative' }, { label: '平衡', value: 'balanced' }, { label: '灵敏', value: 'aggressive' }]} /></Col>
-                  <Col span={4}><Text>模块</Text><Select style={{ width: '100%' }} value={module} onChange={setModule} options={[{ label: '护理', value: '护理' }, { label: '医护', value: '医护' }, { label: '后勤', value: '后勤' }, { label: '收费', value: '收费' }, { label: '接待', value: '接待' }]} /></Col>
-                  <Col span={4}><Text>风险级别</Text><Select style={{ width: '100%' }} value={riskLevel} onChange={setRiskLevel} options={[{ label: '低', value: 'low' }, { label: '中', value: 'medium' }, { label: '高', value: 'high' }]} /></Col>
-                  <Col span={7}><Text>模型偏好</Text><Select style={{ width: '100%' }} value={modelPreference} onChange={setModelPreference} options={[{ label: '自动选择', value: 'auto' }, { label: '千问', value: 'qwen' }, { label: 'DeepSeek', value: 'deepseek' }, { label: 'Moonshot', value: 'moonshot' }, { label: 'NLP Agent', value: 'nlp' }, { label: '规则兜底', value: 'rule' }]} /></Col>
+                <Row gutter={[12, 12]}>
+                  <Col xs={24} md={12} xl={5}><Text>选择老人</Text><Select showSearch optionFilterProp="label" placeholder="请选择老人" style={{ width: '100%' }} value={elderlyId} onChange={(v) => setElderlyId(v)} options={elderlyOptions} /></Col>
+                  <Col xs={24} md={12} xl={4}><Text>策略模式</Text><Select style={{ width: '100%' }} value={strategyMode} onChange={setStrategyMode} options={[{ label: '保守', value: 'conservative' }, { label: '平衡', value: 'balanced' }, { label: '灵敏', value: 'aggressive' }]} /></Col>
+                  <Col xs={24} md={12} xl={4}><Text>模块</Text><Select style={{ width: '100%' }} value={module} onChange={setModule} options={[{ label: '护理', value: '护理' }, { label: '医护', value: '医护' }, { label: '后勤', value: '后勤' }, { label: '收费', value: '收费' }, { label: '接待', value: '接待' }]} /></Col>
+                  <Col xs={24} md={12} xl={4}><Text>风险级别</Text><Select style={{ width: '100%' }} value={riskLevel} onChange={setRiskLevel} options={[{ label: '低', value: 'low' }, { label: '中', value: 'medium' }, { label: '高', value: 'high' }]} /></Col>
+                  <Col xs={24} xl={7}><Text>模型偏好</Text><Select style={{ width: '100%' }} value={modelPreference} onChange={setModelPreference} options={[{ label: '千问', value: 'qwen' }, { label: 'DeepSeek', value: 'deepseek' }, { label: '规则兜底', value: 'rule' }]} /></Col>
                 </Row>
                 <div style={{ marginTop: 12 }}>
                   <Text>事件摘要</Text>
-                  <TextArea rows={2} value={eventSummary} onChange={(e) => setEventSummary(e.target.value)} />
+                  <TextArea rows={3} value={eventSummary} onChange={(e) => setEventSummary(e.target.value)} placeholder="请输入任务事件摘要，例如：血压危急，需立即干预" />
                 </div>
                 <Space style={{ marginTop: 12 }} wrap>
                   {demoScenarios.map((s) => <Button key={s.label} onClick={() => { setEventSummary(s.value); setRiskLevel(s.risk); setModule(s.module) }}>场景：{s.label}</Button>)}
                 </Space>
               </Card>
 
-              <Card title="Agent 操作" style={{ borderRadius: 16 }}>
+              <Card title="Agent 操作" style={{ borderRadius: 16, marginTop: 12 }}>
                 <Space direction="vertical" style={{ width: '100%' }}>
                   <Space wrap>
                     <Button type="primary" loading={loading} onClick={createRuntimeTask}>启动任务</Button>
@@ -410,7 +409,7 @@ const AgentVNext: React.FC = () => {
                 </Space>
               </Card>
 
-              <Card title="运行事件流（Runtime Events）" style={{ borderRadius: 16 }}>
+              <Card title="运行事件流（Runtime Events）" style={{ borderRadius: 16, marginTop: 12 }}>
                 {(runtimeEvents || []).length ? <Timeline items={runtimeEvents.slice(-20).map((evt: any) => ({ color: evt.type?.includes('FAILED') ? 'red' : evt.type?.includes('DONE') ? 'green' : 'blue', children: <div><b>{evt.type}</b>｜{evt.message}<div><Text type="secondary">{evt.at}</Text></div></div> }))} /> : <Text type="secondary">暂无运行事件</Text>}
               </Card>
 
@@ -423,8 +422,8 @@ const AgentVNext: React.FC = () => {
             </Space>
           </Card>
         </Col>
-        <Col xs={24} lg={6}>
-          <Card title="记忆与治理" style={{ borderRadius: 18 }}>
+        <Col xs={24} lg={5}>
+          <Card title="记忆与治理" style={{ borderRadius: 18, height: '100%' }}>
             <List dataSource={memoryFacts} renderItem={(item) => <List.Item>{item}</List.Item>} />
             <Divider style={{ margin: '12px 0' }} />
             <Space>

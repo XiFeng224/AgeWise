@@ -224,7 +224,7 @@ router.post('/tasks', authenticate, validateBody({
     pushRuntimeEvent(taskId, { type: 'TASK_FAILED', message: error?.message || '规划失败' })
     return sendError(res, error?.message || '任务规划失败', 400, { taskId, traceId: req.traceId })
   }
-}, 30_000))
+}, 60_000))
 
 router.post('/tasks/:taskId/approve', authenticate, authorize(['admin', 'manager']), withTimeout(async (req, res) => {
   const task = runtimeTasks.get(req.params.taskId)

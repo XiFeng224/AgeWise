@@ -7,7 +7,7 @@ class EmotionService {
   async analyzeVoiceEmotion(elderlyId: number, audioData: string) {
     try {
       // 调用AI服务分析语音情感
-      const emotionAnalysis = await agentService.analyzeEmotion(audioData, 'voice')
+      const emotionAnalysis = await agentService.analyzeEmotion(audioData, 'voice') as { emotionType: string; intensity: number; context: string }
       
       // 保存情绪记录
       const emotionRecord = await EmotionRecord.create({
@@ -35,7 +35,7 @@ class EmotionService {
   async analyzeTextEmotion(elderlyId: number, text: string) {
     try {
       // 调用AI服务分析文本情感
-      const emotionAnalysis = await agentService.analyzeEmotion(text, 'text')
+      const emotionAnalysis = await agentService.analyzeEmotion(text, 'text') as { emotionType: string; intensity: number; context: string }
       
       // 保存情绪记录
       const emotionRecord = await EmotionRecord.create({

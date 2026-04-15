@@ -9,8 +9,8 @@ const sequelize = database
 const getWarnings = async (req: Request, res: Response) => {
   try {
     const { page = 1, limit = 10, status, riskLevel, elderlyName, startDate, endDate } = req.query
-    const userId = (req as any).user.userId
-    const userRole = (req as any).user.role
+    const userId = (req as any).user?.userId
+    const userRole = (req as any).user?.role
 
     // 构建查询条件
     const whereClause: any = {}
@@ -92,8 +92,8 @@ const getWarnings = async (req: Request, res: Response) => {
 const getWarningById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
-    const userId = (req as any).user.userId
-    const userRole = (req as any).user.role
+    const userId = (req as any).user?.userId
+    const userRole = (req as any).user?.role
 
     const warning = await Warning.findByPk(id, {
       include: [
@@ -257,13 +257,13 @@ const updateWarning = async (req: Request, res: Response) => {
 
     const updateData: any = {}
     if (status) updateData.status = status
-    if (handleNotes !== undefined) updateData.handleNotes = handleNotes
+    if (handleNotes !== undefined) updateData.handle_notes = handleNotes
     if (followUpAt) updateData.followUpAt = new Date(followUpAt)
     if (followUpResult !== undefined) updateData.followUpResult = followUpResult
 
     if (nextStatus === 'processing' || nextStatus === 'resolved') {
       updateData.handlerId = userId
-      updateData.handleTime = new Date()
+      updateData.handle_time = new Date()
     }
 
     await warning.update(updateData)
@@ -319,6 +319,7 @@ const getWarningStats = async (req: Request, res: Response) => {
     const resolvedWarnings = await Warning.count({ 
       where: { ...dateCondition, status: 'resolved' } 
     })
+    const handledWarnings = processingWarnings + resolvedWarnings
 
     // 按风险等级统计
     const riskLevelRows = await Warning.findAll({
@@ -360,11 +361,11 @@ const getWarningStats = async (req: Request, res: Response) => {
         }
       },
       attributes: [
-        [fn('DATE', col('created_at')), 'date'],
+        [fn('DATE', col('createdAt')), 'date'],
         [fn('COUNT', col('id')), 'count']
       ],
-      group: [fn('DATE', col('created_at'))],
-      order: [[fn('DATE', col('created_at')), 'ASC']],
+      group: [fn('DATE', col('createdAt'))],
+      order: [[fn('DATE', col('createdAt')), 'ASC']],
       raw: true
     }) as unknown as Array<{ date: string; count: number }>
 
@@ -386,13 +387,13 @@ const getWarningStats = async (req: Request, res: Response) => {
         status: 'resolved',
         handle_time: { [Op.not]: null }
       },
-      attributes: ['created_at', 'handle_time'],
+      attributes: ['createdAt', 'handle_time'],
       raw: true
     }) as unknown as Array<{ created_at: string; handle_time: string }>
 
     const avgHandleHours = resolvedWithDuration.length > 0
       ? Number((resolvedWithDuration.reduce((sum, item) => {
-          const start = new Date((item as any).created_at).getTime()
+          const start = new Date((item as any).createdAt).getTime()
           const end = new Date((item as any).handle_time).getTime()
           return sum + Math.max(0, end - start)
         }, 0) / resolvedWithDuration.length / (1000 * 60 * 60)).toFixed(2))
@@ -402,7 +403,7 @@ const getWarningStats = async (req: Request, res: Response) => {
       where: {
         ...dateCondition,
         status: { [Op.in]: ['pending', 'processing'] },
-        created_at: {
+        createdAt: {
           [Op.lt]: new Date(Date.now() - 24 * 60 * 60 * 1000)
         }
       }
@@ -417,7 +418,7 @@ const getWarningStats = async (req: Request, res: Response) => {
           processing: processingWarnings,
           resolved: resolvedWarnings,
           resolutionRate: totalWarnings > 0
-            ? ((processingWarnings + resolvedWarnings) / totalWarnings * 100).toFixed(1)
+            ? (handledWarnings / totalWarnings * 100).toFixed(1)
             : 0,
           avgHandleHours,
           timeoutCount

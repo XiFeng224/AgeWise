@@ -6,7 +6,7 @@ import { sendSuccess, sendError } from '../utils/response'
 export const getNotifications = async (req: Request, res: Response) => {
   try {
     const { page = 1, limit = 10 } = req.query
-    const userId = (req as any).user.userId
+    const userId = (req as any).user?.userId
 
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string)
 
@@ -35,7 +35,7 @@ export const getNotifications = async (req: Request, res: Response) => {
 // 获取未读通知
 export const getUnreadNotifications = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId
+    const userId = (req as any).user?.userId
 
     const notifications = await Notification.findAll({
       where: { userId, isRead: false },

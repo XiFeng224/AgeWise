@@ -1,4 +1,5 @@
 import { Request, Response } from 'express'
+import { Op } from 'sequelize'
 import { HealthRecord, Elderly } from '../models'
 import { cacheService } from '../services/cacheService'
 
@@ -60,7 +61,7 @@ export const getHealthRecords = async (req: Request, res: Response) => {
 
     const where: any = {}
     if (elderlyId) {
-      where.elderlyId = elderlyId
+      where.elderlyId = Number(elderlyId)
     }
     if (recordType) {
       where.recordType = recordType
@@ -229,5 +230,3 @@ export const deleteHealthRecord = async (req: Request, res: Response) => {
   }
 }
 
-// 导入Op操作符
-import { Op } from 'sequelize'

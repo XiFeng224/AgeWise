@@ -117,6 +117,10 @@ class ResourceSchedulingService {
       // 选择匹配度最高的服务人员
       const bestMatch = providersWithScore[0]
 
+      if (!bestMatch) {
+        return { success: false, message: '未找到合适的服务人员' }
+      }
+
       if (bestMatch.score > 0) {
         // 分配服务
         await serviceRequest.update({

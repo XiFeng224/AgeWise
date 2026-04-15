@@ -13,6 +13,7 @@ export interface AgentTaskCard {
   description: string
   priority: 'low' | 'medium' | 'high'
   status: 'pending' | 'processing' | 'resolved' | 'assigned' | 'completed'
+  source?: '风险预警' | '手动创建'
   suggestedAction: string
   slaMinutes: number
   elapsedMinutes: number

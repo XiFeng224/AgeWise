@@ -7,8 +7,10 @@ describe('AgentService', () => {
       const result = await agentService.processNaturalLanguageQuery(query)
       
       expect(result.success).toBe(true)
-      expect(result.query).toBe(query)
-      expect(result.data).toBeDefined()
+      if (result.success) {
+        expect(result.query).toBe(query)
+        expect(result.data).toBeDefined()
+      }
     })
     
     it('should handle empty query', async () => {

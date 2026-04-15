@@ -37,7 +37,10 @@ class HealthDataService {
 
       // 如果数据异常，生成预警
       if (analysisResult.isAbnormal) {
-        await warningManagementService.analyzeHealthDataAndGenerateWarning(data.elderlyId, data)
+        await warningManagementService.analyzeHealthDataAndGenerateWarning(data.elderlyId, {
+          ...data,
+          message: analysisResult.message
+        })
       }
 
       return {

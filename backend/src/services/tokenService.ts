@@ -28,8 +28,7 @@ class TokenService {
       role: user.role
     }
 
-    // @ts-ignore - jsonwebtoken类型定义问题
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN })
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] })
   }
 
   /**
@@ -44,8 +43,7 @@ class TokenService {
       role: user.role
     }
 
-    // @ts-ignore - jsonwebtoken类型定义问题
-    return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: JWT_REFRESH_EXPIRES_IN })
+    return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: JWT_REFRESH_EXPIRES_IN as jwt.SignOptions['expiresIn'] })
   }
 
   /**
@@ -79,7 +77,7 @@ class TokenService {
    * @param token 令牌
    * @param expiresIn 过期时间（秒）
    */
-  async blacklistToken(token: string, expiresIn: number): Promise<void> {
+  async blacklistToken(token: string, _expiresIn: number): Promise<void> {
     try {
       // 计算令牌的过期时间
       const decoded = jwt.decode(token) as any

@@ -1,8 +1,24 @@
 import { Request, Response, NextFunction } from 'express'
 import { tokenService } from '../services/tokenService'
 
+interface AuthUser {
+  userId: number
+  username: string
+  role: string
+  realName: string
+  [key: string]: any
+}
+
+interface TokenUserPayload {
+  userId: number
+  username: string
+  role: string
+  realName?: string
+  [key: string]: any
+}
+
 interface AuthRequest extends Request {
-  user?: any
+  user?: AuthUser
 }
 
 export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -26,14 +42,14 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
       }
 
       // 验证令牌
-      const decoded = tokenService.verifyAccessToken(token)
+      const decoded = tokenService.verifyAccessToken(token) as TokenUserPayload | null
       if (!decoded) {
         return res.status(401).json({
           error: '访问令牌无效或已过期'
         })
       }
 
-      req.user = decoded
+      req.user = decoded as AuthUser
       next()
     } catch (error) {
       return res.status(401).json({
@@ -56,7 +72,7 @@ export const authorize = (roles: string[]) => {
       })
     }
 
-    if (!roles.includes(req.user.role)) {
+    if (!req.user.role || !roles.includes(req.user.role)) {
       return res.status(403).json({
         error: '权限不足'
       })

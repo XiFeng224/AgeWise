@@ -6,8 +6,8 @@ import { maskPhone, maskIdCard, canViewSensitive } from '../utils/mask'
 export const getElderlyList = async (req: Request, res: Response) => {
   try {
     const { page = 1, limit = 10, search, riskLevel, healthStatus } = req.query
-    const userId = (req as any).user.userId
-    const userRole = (req as any).user.role
+    const userId = (req as any).user?.userId
+    const userRole = (req as any).user?.role
 
     // 构建查询条件
     const whereClause: any = {}
@@ -81,8 +81,8 @@ export const getElderlyList = async (req: Request, res: Response) => {
 export const getElderlyById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
-    const userId = (req as any).user.userId
-    const userRole = (req as any).user.role
+    const userId = (req as any).user?.userId
+    const userRole = (req as any).user?.role
 
     const elderly = await Elderly.findByPk(id, {
       include: [
@@ -185,7 +185,7 @@ export const createElderly = async (req: Request, res: Response) => {
       emergencyPhone,
       healthStatus: healthStatus || 'good',
       riskLevel: riskLevel || 'low',
-      isAlone: isAlone || false,
+      isAlone: !!isAlone,
       gridMemberId,
       notes
     })
@@ -269,7 +269,7 @@ export const getElderlyWarnings = async (req: Request, res: Response) => {
     const { id } = req.params
     const { page = 1, limit = 10, status } = req.query
 
-    const whereClause: any = { elderlyId: id }
+    const whereClause: any = { elderlyId: Number(id) }
     
     if (status) {
       whereClause.status = status
@@ -316,7 +316,7 @@ export const getElderlyServices = async (req: Request, res: Response) => {
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string)
 
     const { count, rows } = await ServiceRecord.findAndCountAll({
-      where: { elderlyId: id },
+      where: { elderlyId: Number(id) },
       limit: parseInt(limit as string),
       offset,
       order: [['serviceDate', 'DESC']]

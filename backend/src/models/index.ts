@@ -80,7 +80,8 @@ User.init({
 }, {
   sequelize: database,
   tableName: 'users',
-  modelName: 'User'
+  modelName: 'User',
+  underscored: true
 })
 
 // 老人模型
@@ -191,7 +192,8 @@ Elderly.init({
 }, {
   sequelize: database,
   tableName: 'elderly',
-  modelName: 'Elderly'
+  modelName: 'Elderly',
+  underscored: true
 })
 
 // 预警记录模型
@@ -382,7 +384,8 @@ ServiceRecord.init({
 }, {
   sequelize: database,
   tableName: 'service_records',
-  modelName: 'ServiceRecord'
+  modelName: 'ServiceRecord',
+  underscored: true
 })
 
 // 健康档案模型
@@ -486,7 +489,8 @@ HealthRecord.init({
 }, {
   sequelize: database,
   tableName: 'health_records',
-  modelName: 'HealthRecord'
+  modelName: 'HealthRecord',
+  underscored: true
 })
 
 // 通知模型
@@ -556,7 +560,8 @@ Notification.init({
 }, {
   sequelize: database,
   tableName: 'notifications',
-  modelName: 'Notification'
+  modelName: 'Notification',
+  underscored: true
 })
 
 // 健康数据模型
@@ -645,7 +650,8 @@ HealthData.init({
 }, {
   sequelize: database,
   tableName: 'health_data',
-  modelName: 'HealthData'
+  modelName: 'HealthData',
+  underscored: true
 })
 
 // 行为轨迹模型
@@ -732,7 +738,8 @@ ActivityTrack.init({
 }, {
   sequelize: database,
   tableName: 'activity_tracks',
-  modelName: 'ActivityTrack'
+  modelName: 'ActivityTrack',
+  underscored: true
 })
 
 // 情绪记录模型
@@ -806,7 +813,8 @@ EmotionRecord.init({
 }, {
   sequelize: database,
   tableName: 'emotion_records',
-  modelName: 'EmotionRecord'
+  modelName: 'EmotionRecord',
+  underscored: true
 })
 
 // 认知测试模型
@@ -888,7 +896,8 @@ CognitiveTest.init({
 }, {
   sequelize: database,
   tableName: 'cognitive_tests',
-  modelName: 'CognitiveTest'
+  modelName: 'CognitiveTest',
+  underscored: true
 })
 
 // 用药依从性模型
@@ -977,7 +986,8 @@ MedicationAdherence.init({
 }, {
   sequelize: database,
   tableName: 'medication_adherence',
-  modelName: 'MedicationAdherence'
+  modelName: 'MedicationAdherence',
+  underscored: true
 })
 
 // 服务人员模型
@@ -1080,7 +1090,8 @@ ServiceProvider.init({
 }, {
   sequelize: database,
   tableName: 'service_providers',
-  modelName: 'ServiceProvider'
+  modelName: 'ServiceProvider',
+  underscored: true
 })
 
 // 服务请求模型
@@ -1195,7 +1206,8 @@ ServiceRequest.init({
 }, {
   sequelize: database,
   tableName: 'service_requests',
-  modelName: 'ServiceRequest'
+  modelName: 'ServiceRequest',
+  underscored: true
 })
 
 // 社区积分模型

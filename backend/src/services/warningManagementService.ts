@@ -4,19 +4,19 @@ import healthRiskService from './healthRiskService'
 
 // 预警管理服务类
 class WarningManagementService {
-  // 预警等级定义
+  // 预警等级定义（与模型 riskLevel: low/medium/high 保持一致）
   private warningLevels = {
-    green: {
+    low: {
       name: '绿色（日常）',
       priority: 1,
       response: '生成周报给家属'
     },
-    yellow: {
+    medium: {
       name: '黄色（关注）',
       priority: 2,
       response: '自动推送健康建议+社区医生视频随访'
     },
-    red: {
+    high: {
       name: '红色（紧急）',
       priority: 3,
       response: '自动呼叫120+通知家属+打开家中智能门锁'
@@ -250,9 +250,9 @@ class WarningManagementService {
 
       // 转换风险等级
       const riskLevelMap: Record<string, 'low' | 'medium' | 'high'> = {
-        'green': 'low',
-        'yellow': 'medium',
-        'red': 'high'
+        low: 'low',
+        medium: 'medium',
+        high: 'high'
       }
 
       // 创建预警记录
@@ -311,7 +311,7 @@ class WarningManagementService {
       }
 
       // 发送通知给家属
-      familyMembers.forEach(familyMember => {
+      await Promise.all(familyMembers.map((familyMember: any) => 
         notificationService.sendNotification(
           familyMember.id,
           warning.title,
@@ -319,11 +319,11 @@ class WarningManagementService {
           'warning',
           warning.id
         )
-      })
+      ))
 
       // 发送通知给管理员
       const admins = await User.findAll({ where: { role: 'admin' } })
-      admins.forEach(admin => {
+      await Promise.all(admins.map((admin: any) => 
         notificationService.sendNotification(
           admin.id,
           warning.title,
@@ -331,7 +331,7 @@ class WarningManagementService {
           'warning',
           warning.id
         )
-      })
+      ))
     } catch (error) {
       console.error('发送预警通知失败:', error)
     }

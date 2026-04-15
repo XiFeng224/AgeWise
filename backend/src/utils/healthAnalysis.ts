@@ -17,7 +17,7 @@ export function calculateHealthRisk(data: {
   const recommendations: string[] = []
 
   // 心率风险评估
-  if (data.heartRate) {
+  if (data.heartRate !== undefined && data.heartRate !== null) {
     if (data.heartRate < 60 || data.heartRate > 100) {
       totalScore += 30
       recommendations.push('心率异常，建议咨询医生')
@@ -40,7 +40,7 @@ export function calculateHealthRisk(data: {
   }
 
   // 血糖风险评估
-  if (data.bloodSugar) {
+  if (data.bloodSugar !== undefined && data.bloodSugar !== null) {
     if (data.bloodSugar < 3.9 || data.bloodSugar > 7.0) {
       totalScore += 30
       recommendations.push('血糖异常，建议咨询医生')
@@ -51,7 +51,7 @@ export function calculateHealthRisk(data: {
   }
 
   // 体温风险评估
-  if (data.temperature) {
+  if (data.temperature !== undefined && data.temperature !== null) {
     if (data.temperature < 36.0 || data.temperature > 37.5) {
       totalScore += 25
       recommendations.push('体温异常，建议咨询医生')
@@ -59,7 +59,7 @@ export function calculateHealthRisk(data: {
   }
 
   // 步数风险评估
-  if (data.steps) {
+  if (data.steps !== undefined && data.steps !== null) {
     if (data.steps < 500) {
       totalScore += 20
       recommendations.push('步数过少，建议适当增加活动')
@@ -70,7 +70,7 @@ export function calculateHealthRisk(data: {
   }
 
   // 睡眠风险评估
-  if (data.sleep) {
+  if (data.sleep !== undefined && data.sleep !== null) {
     if (data.sleep < 4 || data.sleep > 10) {
       totalScore += 25
       recommendations.push('睡眠异常，建议调整作息')
@@ -117,7 +117,8 @@ export function analyzeHealthTrend(dataPoints: number[]): {
   const sumXY = xValues.reduce((sum, x, i) => sum + x * dataPoints[i], 0)
   const sumX2 = xValues.reduce((sum, x) => sum + x * x, 0)
 
-  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
+  const denominator = n * sumX2 - sumX * sumX
+  const slope = denominator !== 0 ? (n * sumXY - sumX * sumY) / denominator : 0
 
   // 计算变化百分比
   const firstValue = dataPoints[0]
@@ -174,7 +175,8 @@ export function predictHealthTrend(dataPoints: number[], days: number = 7): numb
   const sumXY = xValues.reduce((sum, x, i) => sum + x * dataPoints[i], 0)
   const sumX2 = xValues.reduce((sum, x) => sum + x * x, 0)
 
-  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
+  const denominator = n * sumX2 - sumX * sumX
+  const slope = denominator !== 0 ? (n * sumXY - sumX * sumY) / denominator : 0
   const intercept = (sumY - slope * sumX) / n
 
   // 预测未来值

@@ -17,13 +17,13 @@ class OutreachService {
     const result = {
       sms: {
         provider: smsProvider,
-        success: false as boolean,
+        success: false,
         target: elderly.emergencyPhone || '',
         error: ''
       },
       wecom: {
         enabled: wecomEnabled,
-        success: false as boolean,
+        success: false,
         webhook: !!process.env.WECOM_WEBHOOK_URL,
         error: ''
       }

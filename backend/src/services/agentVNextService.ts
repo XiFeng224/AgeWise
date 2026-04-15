@@ -628,7 +628,7 @@ class AgentVNextService {
       execution,
       executionTrace,
       executed: input.autoExecute !== false,
-      planningAnswer: plan?.copilot?.summary || plan?.planner?.summary || '已生成任务规划'
+      planningAnswer: plan?.decision?.copilot?.summary || plan?.planner?.summary || '已生成任务规划'
     }
   }
 

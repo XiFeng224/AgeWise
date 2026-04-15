@@ -108,7 +108,7 @@ class MedicalAssistantService {
   private buildPlainMedicalAdvice(latest: Record<string, any>) {
     const suggestions: string[] = []
     const emergencySignals: string[] = []
-    let level: 'normal' | 'attention' | 'urgent' = 'normal' as 'normal' | 'attention' | 'urgent'
+    let level: 'normal' | 'attention' | 'urgent' = 'normal'
 
     const bp = latest.blood_pressure
     if (bp) {
@@ -118,9 +118,7 @@ class MedicalAssistantService {
         level = 'urgent'
         emergencySignals.push('血压极高，建议立即联系家属并就医。')
       } else if (sbp >= 140 || (dbp && dbp >= 90)) {
-        if (level !== 'urgent') {
-          level = 'attention'
-        }
+        level = 'attention'
         suggestions.push('血压偏高：请先安静休息10分钟后复测，减少盐分，必要时联系社区医生。')
       }
     }

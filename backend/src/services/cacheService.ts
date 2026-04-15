@@ -1,4 +1,3 @@
-// @ts-ignore - ioredis类型声明
 import Redis from 'ioredis'
 import dotenv from 'dotenv'
 

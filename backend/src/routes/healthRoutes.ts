@@ -121,6 +121,26 @@ router.post('/', authenticate, async (req, res) => {
   }
 })
 
+router.get('/reports/health/:elderlyId', authenticate, async (req, res) => {
+  try {
+    const { elderlyId } = req.params
+    const { days = 7 } = req.query
+    const history = await healthDataService.getElderlyHealthHistory(Number(elderlyId), undefined, Number(days))
+    const elderly = await Elderly.findByPk(Number(elderlyId))
+    if (!elderly) return sendError(res, '老人不存在', 404)
+
+    const report = generateHealthReport({
+      name: elderly.name,
+      age: elderly.age,
+      healthData: history
+    })
+
+    return sendSuccess(res, report)
+  } catch (error) {
+    return sendError(res, '服务器内部错误', 500)
+  }
+})
+
 router.get('/:id', authenticate, async (req, res) => {
   try {
     const item = await HealthRecord.findByPk(Number(req.params.id))
@@ -148,26 +168,6 @@ router.delete('/:id', authenticate, async (req, res) => {
     if (!item) return sendError(res, '健康档案不存在', 404)
     await item.destroy()
     return sendSuccess(res, null, '健康档案删除成功')
-  } catch (error) {
-    return sendError(res, '服务器内部错误', 500)
-  }
-})
-
-router.get('/reports/health/:elderlyId', authenticate, async (req, res) => {
-  try {
-    const { elderlyId } = req.params
-    const { days = 7 } = req.query
-    const history = await healthDataService.getElderlyHealthHistory(Number(elderlyId), undefined, Number(days))
-    const elderly = await Elderly.findByPk(Number(elderlyId))
-    if (!elderly) return sendError(res, '老人不存在', 404)
-
-    const report = generateHealthReport({
-      name: elderly.name,
-      age: elderly.age,
-      healthData: history
-    })
-
-    return sendSuccess(res, report)
   } catch (error) {
     return sendError(res, '服务器内部错误', 500)
   }

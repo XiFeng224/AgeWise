@@ -37,9 +37,18 @@ function checkValue(field: string, value: any, rule: Rule): string | null {
   }
 
   if (rule.type === 'boolean') {
-    if (typeof value !== 'boolean') return `${field}必须为布尔值`
-    if (rule.enum && !rule.enum.includes(value)) return `${field}取值无效`
-    return null
+    if (typeof value === 'boolean') {
+      if (rule.enum && !rule.enum.includes(value)) return `${field}取值无效`
+      return null
+    }
+
+    if (value === 'true' || value === 'false' || value === 1 || value === 0 || value === '1' || value === '0') {
+      const normalized = value === 'true' || value === 1 || value === '1'
+      if (rule.enum && !rule.enum.includes(normalized)) return `${field}取值无效`
+      return null
+    }
+
+    return `${field}必须为布尔值`
   }
 
   return null

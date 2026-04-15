@@ -19,6 +19,7 @@ router.get('/', getWarnings)
 
 // 获取预警统计（注意：需放在 /:id 前面）
 router.get('/stats/overview', getWarningStats)
+router.get('/stats', getWarningStats)
 
 // 手动触发风险检查
 router.post('/check/manual', authorize(['admin', 'manager']), triggerManualCheck)

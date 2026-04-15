@@ -8,13 +8,56 @@ const QWEN_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/complet
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY
 const DEEPSEEK_URL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/chat/completions'
 
+const QUERY_ROUTER_PROMPT = '你是社区养老场景问答与任务路由器。请输出JSON：{"intent":"query_elderly_info|query_health_status|query_service_records|query_warnings|statistical_analysis|care_advice|risk_judgement|task_action","entities":{},"sql_hint":"","needs_follow_up":true,"follow_up_type":"answer|task|both","answer_style":"brief|normal","confidence":0-1}。若问题是建议/判断/解释类，优先返回 care_advice 或 risk_judgement；若需要执行则可返回 task_action。只输出JSON。'
+
+interface AgentModelResult {
+  intent?: string
+  type: string
+  sql_hint?: string
+  modelSource?: string
+  entities?: Record<string, unknown>
+  confidence?: number
+  follow_up_type?: string
+  needs_follow_up?: boolean
+  [key: string]: unknown
+}
+
+interface AdvancedSearchFilters {
+  ageRange?: [unknown, unknown]
+  gender?: unknown
+  healthStatus?: unknown
+  riskLevel?: unknown
+  address?: unknown
+  [key: string]: unknown
+}
+
+interface QuerySuccessResult extends Record<string, unknown> {
+  success: true
+  intent: string
+  query: string
+  sql: string
+  data: unknown
+  summary: string
+  answer: string
+  shouldEscalate: boolean
+  suggestedAction: string[]
+  modelSource: string
+}
+
+interface QueryErrorResult {
+  success: false
+  error: string
+}
+
+type QueryResult = QuerySuccessResult | QueryErrorResult
+
 class AgentService {
   /**
    * 处理自然语言查询
    * @param query 自然语言查询字符串
    * @returns 处理后的查询结果
    */
-  async processNaturalLanguageQuery(query: string, options: { modelPreference?: string; deepThink?: boolean; searchMode?: boolean } = {}): Promise<any> {
+  async processNaturalLanguageQuery(query: string, options: { modelPreference?: string; deepThink?: boolean; searchMode?: boolean } = {}): Promise<QueryResult> {
     try {
       if (!query || query.trim() === '') {
         return {
@@ -30,56 +73,59 @@ class AgentService {
       // 优先调用指定模型或自动选择
       const preferred = await this.callPreferredModel(query, preference, { deepThink, searchMode })
       if (preferred?.intent) {
-        const result = await this.executeQuery(preferred, query)
-        const answer = await this.buildAnswer(query, result, preferred, preferred.modelSource || 'preferred')
+        const queryIntent = this.ensureQueryIntent(preferred)
+        const result = await this.executeQuery(queryIntent, query)
+        const answer = await this.buildAnswer(query, result, queryIntent, queryIntent.modelSource || 'preferred')
         return {
           success: true,
-          intent: preferred.intent,
+          intent: queryIntent.intent,
           query,
-          sql: preferred.sql_hint || this.generateSqlQuery(preferred, query),
+          sql: queryIntent.sql_hint || this.generateSqlQuery(queryIntent, query),
           data: result.data,
           summary: result.summary,
           answer,
-          shouldEscalate: this.shouldEscalate(query, preferred.intent, result.data),
-          suggestedAction: this.buildSuggestedAction(query, preferred.intent, result.data),
-          modelSource: preferred.modelSource || preference || 'auto'
+          shouldEscalate: this.shouldEscalate(query, queryIntent.intent, result.data),
+          suggestedAction: this.buildSuggestedAction(query, queryIntent.intent, result.data),
+          modelSource: queryIntent.modelSource || preference || 'auto'
         }
       }
 
       // 优先调用千问（若已配置）
       const qwenResult = await this.callQwenAgent(query)
       if (qwenResult?.intent) {
-        const result = await this.executeQuery(qwenResult, query)
-        const answer = await this.buildAnswer(query, result, qwenResult, 'qwen')
+        const queryIntent = this.ensureQueryIntent(qwenResult)
+        const result = await this.executeQuery(queryIntent, query)
+        const answer = await this.buildAnswer(query, result, queryIntent, 'qwen')
         return {
           success: true,
-          intent: qwenResult.intent,
+          intent: queryIntent.intent,
           query,
-          sql: qwenResult.sql_hint || this.generateSqlQuery(qwenResult, query),
+          sql: queryIntent.sql_hint || this.generateSqlQuery(queryIntent, query),
           data: result.data,
           summary: result.summary,
           answer,
-          shouldEscalate: this.shouldEscalate(query, qwenResult.intent, result.data),
-          suggestedAction: this.buildSuggestedAction(query, qwenResult.intent, result.data),
+          shouldEscalate: this.shouldEscalate(query, queryIntent.intent, result.data),
+          suggestedAction: this.buildSuggestedAction(query, queryIntent.intent, result.data),
           modelSource: 'qwen'
         }
       }
 
       // 次选：Python NLP Agent
       const nlpResult = await this.callNlpAgent(query)
-      if (nlpResult?.intent) {
-        const result = await this.executeQuery(nlpResult, query)
-        const answer = await this.buildAnswer(query, result, nlpResult, 'nlp')
+      if (nlpResult && typeof nlpResult === 'object' && 'intent' in nlpResult && typeof nlpResult.intent === 'string') {
+        const queryIntent = this.ensureQueryIntent(nlpResult as AgentModelResult)
+        const result = await this.executeQuery(queryIntent, query)
+        const answer = await this.buildAnswer(query, result, queryIntent, 'nlp')
         return {
           success: true,
-          intent: nlpResult.intent,
+          intent: queryIntent.intent,
           query,
-          sql: nlpResult.sql_hint || this.generateSqlQuery(nlpResult, query),
+          sql: queryIntent.sql_hint || this.generateSqlQuery(queryIntent, query),
           data: result.data,
           summary: result.summary,
           answer,
-          shouldEscalate: this.shouldEscalate(query, nlpResult.intent, result.data),
-          suggestedAction: this.buildSuggestedAction(query, nlpResult.intent, result.data),
+          shouldEscalate: this.shouldEscalate(query, queryIntent.intent, result.data),
+          suggestedAction: this.buildSuggestedAction(query, queryIntent.intent, result.data),
           modelSource: 'nlp'
         }
       }
@@ -115,7 +161,7 @@ class AgentService {
   /**
    * 调用千问进行意图识别
    */
-  private async callPreferredModel(query: string, preference: string, context: { deepThink: boolean; searchMode: boolean }): Promise<any> {
+  private async callPreferredModel(query: string, preference: string, context: { deepThink: boolean; searchMode: boolean }): Promise<AgentModelResult | null> {
     if (preference === 'qwen' || preference === 'auto') {
       const qwenResult = await this.callQwenAgent(query, context)
       if (qwenResult?.intent) return qwenResult
@@ -131,7 +177,7 @@ class AgentService {
     return null
   }
 
-  private async callQwenAgent(query: string, context: { deepThink: boolean; searchMode: boolean } = { deepThink: false, searchMode: false }): Promise<any> {
+  private async callQwenAgent(query: string, context: { deepThink: boolean; searchMode: boolean } = { deepThink: false, searchMode: false }): Promise<AgentModelResult | null> {
     try {
       if (!QWEN_API_KEY) return null
 
@@ -146,7 +192,7 @@ class AgentService {
           messages: [
             {
               role: 'system',
-              content: '你是社区养老场景问答与任务路由器。请输出JSON：{"intent":"query_elderly_info|query_health_status|query_service_records|query_warnings|statistical_analysis|care_advice|risk_judgement|task_action","entities":{},"sql_hint":"","needs_follow_up":true,"follow_up_type":"answer|task|both","answer_style":"brief|normal","confidence":0-1}。若问题是建议/判断/解释类，优先返回 care_advice 或 risk_judgement；若需要执行则可返回 task_action。只输出JSON。'
+              content: QUERY_ROUTER_PROMPT
             },
             {
               role: 'user',
@@ -158,7 +204,7 @@ class AgentService {
       })
 
       if (!response.ok) return null
-      const data: any = await response.json()
+      const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> }
       const content = data?.choices?.[0]?.message?.content
       if (!content) return null
       try {
@@ -179,27 +225,35 @@ class AgentService {
    * @param query 自然语言查询字符串
    * @returns NLP Agent的分析结果
    */
-  private normalizeQwenResult(result: any, query: string): any {
+  private normalizeQwenResult(result: unknown, query: string): AgentModelResult | null {
     if (!result || typeof result !== 'object') return null
-    const intent = result.intent || 'query_elderly_info'
-    const confidence = typeof result.confidence === 'number' ? result.confidence : 0.8
-    const followUpType = result.follow_up_type || (intent === 'task_action' ? 'task' : 'answer')
+
+    const raw = result as Partial<AgentModelResult>
+    const intent = typeof raw.intent === 'string' ? raw.intent : 'query_elderly_info'
+    const confidence = typeof raw.confidence === 'number' ? raw.confidence : 0.8
+    const followUpType = typeof raw.follow_up_type === 'string'
+      ? raw.follow_up_type
+      : (intent === 'task_action' ? 'task' : 'answer')
+    const sqlHint = typeof raw.sql_hint === 'string' && raw.sql_hint ? raw.sql_hint : this.generateSqlQuery({ type: intent }, query)
+    const needsFollowUp = raw.needs_follow_up !== false
+
     return {
-      ...result,
+      ...(raw as AgentModelResult),
       intent,
+      type: intent,
       confidence,
       follow_up_type: followUpType,
-      sql_hint: result.sql_hint || this.generateSqlQuery({ type: intent }, query),
-      needs_follow_up: result.needs_follow_up !== false
+      sql_hint: sqlHint,
+      needs_follow_up: needsFollowUp
     }
   }
 
-  private buildAnswer(query: string, result: any, intentLike: any, source: string): string {
+  private buildAnswer(query: string, result: { data?: unknown[]; summary?: string }, intentLike: { intent?: string; type?: string }, source: string): string {
     const data = Array.isArray(result?.data) ? result.data : []
     const summary = result?.summary || '未获取到明确结果'
     const intent = intentLike?.intent || intentLike?.type || 'general'
 
-    const base = [`我先帮你看了这个问题。`, `当前结论：${summary}`]
+    const base = ['我先帮你看了这个问题。', `当前结论：${summary}`]
 
     if (intent === 'query_warnings' || String(query).includes('预警') || String(query).includes('风险')) {
       base.push('这类问题建议优先查看老人最近一次预警、健康记录和随访状态。')
@@ -216,7 +270,7 @@ class AgentService {
     return base.join(' ')
   }
 
-  private shouldEscalate(query: string, intent: string, data: any[]): boolean {
+  private shouldEscalate(query: string, intent: string, data: unknown[]): boolean {
     const q = String(query || '')
     if (['task_action'].includes(intent)) return true
     if (/怎么办|建议|处理|上门|通知|跟进|升级|紧急/.test(q)) return true
@@ -224,7 +278,7 @@ class AgentService {
     return false
   }
 
-  private buildSuggestedAction(query: string, intent: string, data: any[]): string[] {
+  private buildSuggestedAction(query: string, intent: string, data: unknown[]): string[] {
     const actions: string[] = []
     if (this.shouldEscalate(query, intent, data)) {
       actions.push('进入 Agent 运行台创建任务')
@@ -237,7 +291,7 @@ class AgentService {
     return actions
   }
 
-  private async callDeepSeekAgent(query: string, context: { deepThink: boolean; searchMode: boolean }): Promise<any> {
+  private async callDeepSeekAgent(query: string, context: { deepThink: boolean; searchMode: boolean }): Promise<AgentModelResult | null> {
     try {
       if (!DEEPSEEK_API_KEY) return null
 
@@ -252,7 +306,7 @@ class AgentService {
           messages: [
             {
               role: 'system',
-              content: '你是社区养老场景问答与任务路由器。请输出JSON：{"intent":"query_elderly_info|query_health_status|query_service_records|query_warnings|statistical_analysis|care_advice|risk_judgement|task_action","entities":{},"sql_hint":"","needs_follow_up":true,"follow_up_type":"answer|task|both","answer_style":"brief|normal","confidence":0-1}。若问题是建议/判断/解释类，优先返回 care_advice 或 risk_judgement；若需要执行则可返回 task_action。只输出JSON。'
+              content: QUERY_ROUTER_PROMPT
             },
             {
               role: 'user',
@@ -265,7 +319,7 @@ class AgentService {
       })
 
       if (!response.ok) return null
-      const data: any = await response.json()
+      const data = await response.json() as { choices?: Array<{ message?: { content?: string } }> }
       const content = data?.choices?.[0]?.message?.content
       if (!content) return null
       try {
@@ -281,14 +335,14 @@ class AgentService {
     }
   }
 
-  private async callMoonshotAgent(query: string, context: { deepThink: boolean; searchMode: boolean }): Promise<any> {
+  private async callMoonshotAgent(query: string, context: { deepThink: boolean; searchMode: boolean }): Promise<AgentModelResult | null> {
     return this.callQwenAgent(query, context)
       .then((result) => result ? { ...result, modelSource: 'moonshot' } : null)
       .catch(() => null)
   }
 
-  private async callNlpAgent(query: string): Promise<any> {
-    return new Promise((resolve, reject) => {
+  private async callNlpAgent(query: string): Promise<Record<string, unknown> | null> {
+    return new Promise((resolve) => {
       try {
         // 构建Python脚本路径
         const pythonScriptPath = path.join(__dirname, '../../../agent-service/run_nlp_agent.py')
@@ -333,18 +387,21 @@ class AgentService {
         })
         
         // 设置超时
-        setTimeout(() => {
+        const timeout = setTimeout(() => {
           pythonProcess.kill()
           resolve(null)
         }, 10000) // 10秒超时
-        
+
+        const clearTimer = () => clearTimeout(timeout)
+        pythonProcess.once('close', clearTimer)
+        pythonProcess.once('error', clearTimer)
       } catch (err) {
         console.error('调用NLP Agent失败:', err)
         resolve(null)
       }
     })
   }
-  private analyzeIntent(query: string): any {
+  private analyzeIntent(query: string): { type: string } {
     // 意图类型定义
     const intentTypes = {
       elderlyCount: /(有多少|统计|数量).*老人|老人.*数量/,
@@ -379,7 +436,7 @@ class AgentService {
    */
 
 
-  private generateSqlQuery(intent: any, query: string): string {
+  private generateSqlQuery(intent: { type: string }, query: string): string {
     switch (intent.type) {
       case 'elderlyCount':
         return 'SELECT COUNT(*) as count FROM elderly'
@@ -415,51 +472,81 @@ class AgentService {
    * @param query 处理后的查询字符串
    * @returns 查询结果
    */
-  private async executeQuery(intent: any, query: string): Promise<any> {
+  private ensureQueryIntent(input: AgentModelResult | { type: string }): AgentModelResult {
+    if ('intent' in input || 'type' in input) {
+      const typeValue = 'type' in input && typeof input.type === 'string' && input.type ? input.type : undefined
+      const intentValue = 'intent' in input && typeof input.intent === 'string' && input.intent ? input.intent : undefined
+      const resolvedIntent = intentValue || typeValue || 'query_elderly_info'
+
+      return {
+        type: resolvedIntent,
+        intent: resolvedIntent,
+        sql_hint: typeof (input as AgentModelResult).sql_hint === 'string' ? (input as AgentModelResult).sql_hint : undefined,
+        modelSource: typeof (input as AgentModelResult).modelSource === 'string' ? (input as AgentModelResult).modelSource : undefined,
+        entities: typeof (input as AgentModelResult).entities === 'object' && (input as AgentModelResult).entities !== null
+          ? (input as AgentModelResult).entities
+          : undefined,
+        confidence: typeof (input as AgentModelResult).confidence === 'number' ? (input as AgentModelResult).confidence : undefined,
+        follow_up_type: typeof (input as AgentModelResult).follow_up_type === 'string' ? (input as AgentModelResult).follow_up_type : undefined,
+        needs_follow_up: typeof (input as AgentModelResult).needs_follow_up === 'boolean' ? (input as AgentModelResult).needs_follow_up : undefined
+      }
+    }
+
+    return {
+      type: 'query_elderly_info',
+      intent: 'query_elderly_info',
+      sql_hint: typeof (input as AgentModelResult).sql_hint === 'string' ? (input as AgentModelResult).sql_hint : undefined,
+      modelSource: typeof (input as AgentModelResult).modelSource === 'string' ? (input as AgentModelResult).modelSource : undefined,
+      entities: typeof (input as AgentModelResult).entities === 'object' && (input as AgentModelResult).entities !== null
+        ? (input as AgentModelResult).entities
+        : undefined,
+      confidence: typeof (input as AgentModelResult).confidence === 'number' ? (input as AgentModelResult).confidence : undefined,
+      follow_up_type: typeof (input as AgentModelResult).follow_up_type === 'string' ? (input as AgentModelResult).follow_up_type : undefined,
+      needs_follow_up: typeof (input as AgentModelResult).needs_follow_up === 'boolean' ? (input as AgentModelResult).needs_follow_up : undefined
+    }
+  }
+
+  private async executeQuery(intent: AgentModelResult | { type: string }, query: string): Promise<{ data: unknown[]; summary: string }> {
+    const normalizedIntent = this.ensureQueryIntent(intent)
+
     // 处理来自NLP Agent的意图
-    if (intent.intent) {
-      switch (intent.intent) {
-        case 'query_elderly_info':
-          // 处理老人信息查询
-          const elderlyName = intent.entities?.name
-          let elderlyInfo
-          if (elderlyName) {
-            elderlyInfo = await Elderly.findAll({ 
-              where: { name: { [Op.like]: `%${elderlyName}%` } } 
-            })
-          } else {
-            elderlyInfo = await Elderly.findAll({ limit: 10 })
-          }
+    const intentType = normalizedIntent.intent || normalizedIntent.type
+    if (intentType) {
+      switch (intentType) {
+        case 'query_elderly_info': {
+          const elderlyName = normalizedIntent.entities?.name
+          const elderlyInfo = elderlyName
+            ? await Elderly.findAll({ where: { name: { [Op.like]: `%${elderlyName}%` } } })
+            : await Elderly.findAll({ limit: 10 })
+
           return {
             data: elderlyInfo,
             summary: `找到 ${elderlyInfo.length} 位老人的信息`
           }
-        
-        case 'query_health_status':
-          // 处理健康状况查询
-          const recordType = intent.entities?.record_type
-          let healthRecords
-          if (recordType) {
-            healthRecords = await HealthRecord.findAll({ 
+        }
+
+        case 'query_health_status': {
+          const recordType = normalizedIntent.entities?.record_type
+          const healthRecords = recordType
+            ? await HealthRecord.findAll({
               where: { recordType },
               include: [{ model: Elderly, as: 'elderly' }],
               limit: 10
             })
-          } else {
-            healthRecords = await HealthRecord.findAll({ 
+            : await HealthRecord.findAll({
               include: [{ model: Elderly, as: 'elderly' }],
               order: [['recordDate', 'DESC']],
               limit: 10
             })
-          }
+
           return {
             data: healthRecords,
             summary: `找到 ${healthRecords.length} 条健康记录`
           }
-        
-        case 'query_service_records':
-          // 处理服务记录查询
-          const serviceRecords = await ServiceRecord.findAll({ 
+        }
+
+        case 'query_service_records': {
+          const serviceRecords = await ServiceRecord.findAll({
             include: [{ model: Elderly, as: 'elderly' }],
             order: [['serviceDate', 'DESC']],
             limit: 10
@@ -468,31 +555,28 @@ class AgentService {
             data: serviceRecords,
             summary: `找到 ${serviceRecords.length} 条服务记录`
           }
-        
-        case 'query_warnings':
-          // 处理预警信息查询
-          const riskLevel = intent.entities?.risk_level
-          let warnings
-          if (riskLevel) {
-            warnings = await Warning.findAll({ 
+        }
+
+        case 'query_warnings': {
+          const riskLevel = normalizedIntent.entities?.risk_level
+          const warnings = riskLevel
+            ? await Warning.findAll({
               where: { riskLevel },
               include: [{ model: Elderly, as: 'elderly' }],
               limit: 10
             })
-          } else {
-            warnings = await Warning.findAll({ 
+            : await Warning.findAll({
               include: [{ model: Elderly, as: 'elderly' }],
               order: [['createdAt', 'DESC']],
               limit: 10
             })
-          }
           return {
             data: warnings,
             summary: `找到 ${warnings.length} 条预警信息`
           }
-        
-        case 'statistical_analysis':
-          // 处理统计分析
+        }
+
+        case 'statistical_analysis': {
           const stats = await Elderly.findAll({
             attributes: ['riskLevel', [Elderly.sequelize?.fn('COUNT', Elderly.sequelize?.col('id')), 'count']],
             group: ['riskLevel']
@@ -501,27 +585,29 @@ class AgentService {
             data: stats,
             summary: '老人风险等级分布统计'
           }
-        
-        default:
-          // 默认处理
+        }
+
+        default: {
           const generalElderly = await Elderly.findAll({ limit: 10 })
           return {
             data: generalElderly,
             summary: '系统中的老人信息'
           }
+        }
       }
     }
-    
+
     // 处理本地规则的意图
     switch (intent.type) {
-      case 'elderlyCount':
+      case 'elderlyCount': {
         const elderlyCount = await Elderly.count()
         return {
           data: [{ count: elderlyCount }],
           summary: `系统中共有 ${elderlyCount} 位老人`
         }
-      
-      case 'elderlyByAge':
+      }
+
+      case 'elderlyByAge': {
         let elderlyByAge
         if (query.includes('80')) {
           elderlyByAge = await Elderly.findAll({ where: { age: { [Op.gt]: 80 } } })
@@ -534,8 +620,9 @@ class AgentService {
           data: elderlyByAge,
           summary: `找到 ${elderlyByAge.length} 位符合条件的老人`
         }
-      
-      case 'elderlyByHealth':
+      }
+
+      case 'elderlyByHealth': {
         const healthStats = await Elderly.findAll({
           attributes: ['healthStatus', [Elderly.sequelize?.fn('COUNT', Elderly.sequelize?.col('id')), 'count']],
           group: ['healthStatus']
@@ -544,8 +631,9 @@ class AgentService {
           data: healthStats,
           summary: '老人健康状况分布统计'
         }
-      
-      case 'elderlyByRisk':
+      }
+
+      case 'elderlyByRisk': {
         const riskStats = await Elderly.findAll({
           attributes: ['riskLevel', [Elderly.sequelize?.fn('COUNT', Elderly.sequelize?.col('id')), 'count']],
           group: ['riskLevel']
@@ -554,15 +642,17 @@ class AgentService {
           data: riskStats,
           summary: '老人风险等级分布统计'
         }
-      
-      case 'warningCount':
+      }
+
+      case 'warningCount': {
         const warningCount = await Warning.count()
         return {
           data: [{ count: warningCount }],
           summary: `系统中共有 ${warningCount} 条预警记录`
         }
-      
-      case 'warningByLevel':
+      }
+
+      case 'warningByLevel': {
         const warningLevelStats = await Warning.findAll({
           attributes: ['riskLevel', [Warning.sequelize?.fn('COUNT', Warning.sequelize?.col('id')), 'count']],
           group: ['riskLevel']
@@ -571,15 +661,17 @@ class AgentService {
           data: warningLevelStats,
           summary: '预警风险等级分布统计'
         }
-      
-      case 'serviceCount':
+      }
+
+      case 'serviceCount': {
         const serviceCount = await ServiceRecord.count()
         return {
           data: [{ count: serviceCount }],
           summary: `系统中共有 ${serviceCount} 条服务记录`
         }
-      
-      case 'serviceByType':
+      }
+
+      case 'serviceByType': {
         const serviceTypeStats = await ServiceRecord.findAll({
           attributes: ['serviceType', [ServiceRecord.sequelize?.fn('COUNT', ServiceRecord.sequelize?.col('id')), 'count']],
           group: ['serviceType']
@@ -588,8 +680,9 @@ class AgentService {
           data: serviceTypeStats,
           summary: '服务类型分布统计'
         }
-      
-      case 'healthRecords':
+      }
+
+      case 'healthRecords': {
         const healthRecords = await HealthRecord.findAll({
           include: [{ model: Elderly, as: 'elderly' }],
           order: [['recordDate', 'DESC']],
@@ -599,7 +692,8 @@ class AgentService {
           data: healthRecords,
           summary: '最近的健康档案记录'
         }
-      
+      }
+
       case 'help':
         return {
           data: [
@@ -611,13 +705,14 @@ class AgentService {
           ],
           summary: '您可以使用以下方式进行查询'
         }
-      
-      default:
+
+      default: {
         const generalElderly = await Elderly.findAll({ limit: 10 })
         return {
           data: generalElderly,
           summary: '系统中的老人信息'
         }
+      }
     }
   }
 
@@ -626,24 +721,27 @@ class AgentService {
    * @param filters 筛选条件
    * @returns 搜索结果
    */
-  async processAdvancedSearch(filters: any): Promise<any> {
+  async processAdvancedSearch(filters: AdvancedSearchFilters): Promise<Record<string, unknown>> {
     try {
       // 构建查询条件
-      const whereCondition: any = {}
+      const whereCondition: Record<string, unknown> = {}
       
       // 处理年龄范围
-      if (filters.ageRange && filters.ageRange.length === 2) {
-        const [minAge, maxAge] = filters.ageRange
-        if (minAge) {
-          whereCondition.age = { ...whereCondition.age, [Op.gte]: minAge }
+      const ageRange = Array.isArray(filters.ageRange) ? filters.ageRange : null
+      if (ageRange && ageRange.length === 2) {
+        const [minAge, maxAge] = ageRange as [unknown, unknown]
+        if (minAge !== undefined && minAge !== null) {
+          const currentAge = (whereCondition.age as Record<string, unknown> | undefined) || {}
+          whereCondition.age = { ...currentAge, [Op.gte]: minAge }
         }
-        if (maxAge) {
-          whereCondition.age = { ...whereCondition.age, [Op.lte]: maxAge }
+        if (maxAge !== undefined && maxAge !== null) {
+          const currentAge = (whereCondition.age as Record<string, unknown> | undefined) || {}
+          whereCondition.age = { ...currentAge, [Op.lte]: maxAge }
         }
       }
       
       // 处理性别
-      if (filters.gender) {
+      if (typeof filters.gender === 'string' && filters.gender) {
         const genderMap: Record<string, string> = {
           '男': 'male',
           '女': 'female',
@@ -654,17 +752,17 @@ class AgentService {
       }
       
       // 处理健康状况
-      if (filters.healthStatus) {
+      if (typeof filters.healthStatus === 'string' && filters.healthStatus) {
         whereCondition.healthStatus = filters.healthStatus
       }
       
       // 处理风险等级
-      if (filters.riskLevel) {
+      if (typeof filters.riskLevel === 'string' && filters.riskLevel) {
         whereCondition.riskLevel = filters.riskLevel
       }
       
       // 处理住址
-      if (filters.address) {
+      if (typeof filters.address === 'string' && filters.address) {
         whereCondition.address = { [Op.like]: `%${filters.address}%` }
       }
       
@@ -676,8 +774,8 @@ class AgentService {
       
       // 生成SQL查询
       let sqlQuery = 'SELECT * FROM elderly WHERE 1=1'
-      if (filters.ageRange && filters.ageRange.length === 2) {
-        const [minAge, maxAge] = filters.ageRange
+      if (ageRange && ageRange.length === 2) {
+        const [minAge, maxAge] = ageRange as [unknown, unknown]
         if (minAge) {
           sqlQuery += ` AND age >= ${minAge}`
         }
@@ -686,16 +784,16 @@ class AgentService {
         }
       }
       if (filters.gender) {
-        sqlQuery += ` AND gender = '${filters.gender}'`
+        sqlQuery += ` AND gender = '${String(filters.gender).replace(/'/g, "''")}'`
       }
       if (filters.healthStatus) {
-        sqlQuery += ` AND healthStatus = '${filters.healthStatus}'`
+        sqlQuery += ` AND healthStatus = '${String(filters.healthStatus).replace(/'/g, "''")}'`
       }
       if (filters.riskLevel) {
-        sqlQuery += ` AND riskLevel = '${filters.riskLevel}'`
+        sqlQuery += ` AND riskLevel = '${String(filters.riskLevel).replace(/'/g, "''")}'`
       }
       if (filters.address) {
-        sqlQuery += ` AND address LIKE '%${filters.address}%'`
+        sqlQuery += ` AND address LIKE '%${String(filters.address).replace(/'/g, "''")}%'`
       }
       
       return {
@@ -737,7 +835,7 @@ class AgentService {
     }
 
     // 根据输入过滤建议
-    return suggestions.filter(suggestion => 
+    return suggestions.filter((suggestion) => 
       suggestion.toLowerCase().includes(input.toLowerCase())
     )
   }
@@ -748,7 +846,7 @@ class AgentService {
    * @param type 分析类型（voice 或 text）
    * @returns 情感分析结果
    */
-  async analyzeEmotion(data: string, type: 'voice' | 'text'): Promise<any> {
+  async analyzeEmotion(data: string, type: 'voice' | 'text'): Promise<Record<string, unknown>> {
     try {
       // 模拟情感分析结果
       // 实际项目中应该调用真实的情感分析API

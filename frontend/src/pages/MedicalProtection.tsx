@@ -264,7 +264,7 @@ const MedicalProtection = () => {
               style={{ width: '100%' }}
               value={category === 'all' ? undefined : category}
               onChange={(value) => setCategory(value || 'all')}
-              prefix={<FilterOutlined />}
+              suffixIcon={<FilterOutlined />}
               className="medical-protection-category"
             >
               <Option value="all">全部分类</Option>
@@ -280,7 +280,7 @@ const MedicalProtection = () => {
               style={{ width: '100%' }}
               value={selectedTag === 'all' ? undefined : selectedTag}
               onChange={(value) => setSelectedTag(value || 'all')}
-              prefix={<FilterOutlined />}
+              suffixIcon={<FilterOutlined />}
               className="medical-protection-tag"
             >
               <Option value="all">全部标签</Option>

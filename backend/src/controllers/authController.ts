@@ -161,7 +161,7 @@ export const register = async (req: Request, res: Response) => {
 
 export const getProfile = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId
+    const userId = (req as any).user?.userId
 
     const user = await User.findByPk(userId, {
       attributes: { exclude: ['password'] }
@@ -180,7 +180,7 @@ export const getProfile = async (req: Request, res: Response) => {
 
 export const updateProfile = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId
+    const userId = (req as any).user?.userId
     const { email, phone, realName, avatar } = req.body
 
     const user = await User.findByPk(userId)

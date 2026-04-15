@@ -88,15 +88,19 @@ export const naturalLanguageQuery = async (req: Request, res: Response) => {
       searchMode: Boolean(searchMode)
     })
 
+    const modelSource = (result as any)?.modelSource || 'unknown'
+    const resultAny = result as any
     const enrichedResult = {
-      ...result,
+      ...(result as Record<string, unknown>),
       explainability: buildExplainability(query, result),
       mode: isDemoMode ? 'demo' : 'live',
       generatedAt: new Date().toISOString(),
       latencyMs: Date.now() - startedAt,
-      answer: result.answer || '',
-      shouldEscalate: Boolean(result.shouldEscalate),
-      suggestedAction: result.suggestedAction || []
+      success: Boolean(resultAny?.success),
+      answer: resultAny?.answer || '',
+      shouldEscalate: Boolean(resultAny?.shouldEscalate),
+      suggestedAction: resultAny?.suggestedAction || [],
+      modelSource
     }
 
     // 缓存结果
@@ -104,10 +108,10 @@ export const naturalLanguageQuery = async (req: Request, res: Response) => {
 
     aiMetricsService.recordQuery({
       success: Boolean(enrichedResult.success),
-      usedFallback: enrichedResult.modelSource !== 'qwen',
+      usedFallback: (result as any)?.modelSource !== 'qwen',
       confidence: enrichedResult.explainability?.confidence,
       riskLevel: enrichedResult.explainability?.riskLevel,
-      source: enrichedResult.modelSource || 'unknown',
+      source: (result as any)?.modelSource || 'unknown',
       query,
       latencyMs: enrichedResult.latencyMs
     })
@@ -169,13 +173,14 @@ export const getQuerySuggestions = (req: Request, res: Response) => {
 // 获取查询历史
 export const getQueryHistory = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.userId
+    const userId = (req as any).user?.userId
 
     // 这里可以实现真实的查询历史记录功能
     // 暂时返回模拟数据
     const history = [
       {
         id: 1,
+        userId,
         query: '有多少位老人？',
         resultCount: 1,
         executionTime: '0.02s',

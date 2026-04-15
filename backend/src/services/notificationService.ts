@@ -74,15 +74,17 @@ class NotificationService {
 
       // 获取管理员信息
       const admins = await User.findAll({ where: { role: 'admin' } })
-      for (const admin of admins) {
-        await this.sendNotification(
-          admin.id,
-          '新预警通知',
-          `老人 ${elderly.name} 出现 ${warning.riskLevel} 风险，请关注处理情况`,
-          'warning',
-          warning.id
+      await Promise.all(
+        admins.map((admin) =>
+          this.sendNotification(
+            admin.id,
+            '新预警通知',
+            `老人 ${elderly.name} 出现 ${warning.riskLevel} 风险，请关注处理情况`,
+            'warning',
+            warning.id
+          )
         )
-      }
+      )
     } catch (error) {
       console.error('发送预警通知失败:', error)
     }

@@ -309,6 +309,9 @@ router.get('/tasks/:taskId', authenticate, (req, res) => {
 
 router.get('/tasks/:taskId/events', async (req, res) => {
   try {
+    const runtimeTask = runtimeTasks.get(req.params.taskId)
+    if (!runtimeTask) return sendError(res, '任务不存在', 404, { traceId: req.traceId })
+
     const authHeader = req.headers.authorization
     const queryToken = String(req.query.token || '')
 
@@ -358,10 +361,22 @@ router.get('/tasks/:taskId/events', async (req, res) => {
       }
     }, 15000)
 
-    req.on('close', () => {
+    const cleanup = () => {
       clearInterval(heartbeat)
-      runtimeSubscribers.get(task.id)?.delete(res)
-    })
+      runtimeSubscribers.get(runtimeTask.id)?.delete(res)
+      if (runtimeSubscribers.get(runtimeTask.id)?.size === 0) {
+        runtimeSubscribers.delete(runtimeTask.id)
+      }
+      try {
+        res.end()
+      } catch {
+        // ignore already closed response
+      }
+    }
+
+    req.on('close', cleanup)
+    res.on('close', cleanup)
+    res.on('error', cleanup)
   } catch (error: any) {
     return sendError(res, error?.message || '事件流连接失败', 500)
   }

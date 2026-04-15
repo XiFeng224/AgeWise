@@ -69,15 +69,14 @@ class AIAgentService {
         model: this.model,
         temperature: 0.3,
         response_format: { type: 'json_object' },
-        messages,
-        extra_body: { enable_thinking: false }
+        messages
       },
       {
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
         },
-        timeout: 15000
+        timeout: 20000
       }
     )
 

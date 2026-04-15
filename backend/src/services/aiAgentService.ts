@@ -99,7 +99,7 @@ class AIAgentService {
             Authorization: `Bearer ${this.qwenApiKey}`,
             'Content-Type': 'application/json'
           },
-          timeout: 15000
+          timeout: 3000
         }
       )
 
@@ -155,7 +155,7 @@ class AIAgentService {
             Authorization: `Bearer ${this.deepseekApiKey}`,
             'Content-Type': 'application/json'
           },
-          timeout: 15000
+          timeout: 3000
         }
       )
 

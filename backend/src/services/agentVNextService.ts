@@ -350,7 +350,7 @@ class AgentVNextService {
           sourceSuggestedAction: input.sourceSuggestedAction || []
         }
       }),
-      new Promise((resolve) => setTimeout(() => resolve(null), 3500))
+      new Promise((resolve) => setTimeout(() => resolve(null), 1500))
     ]).catch((error: any) => ({
       answer: '',
       summary: '',

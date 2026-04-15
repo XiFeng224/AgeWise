@@ -385,7 +385,7 @@ class AIAgentService {
       triage,
       dispatch,
       copilot,
-      model: this.model,
+      model: this.qwenModel,
       provider: 'qwen'
     }
   }

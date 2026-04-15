@@ -162,31 +162,40 @@ router.post('/tasks', authenticate, validateBody({
       runtimeTasks.set(taskId, task)
       pushRuntimeEvent(taskId, { type: 'TASK_EXECUTING', message: '自动执行已启动' })
 
-      const autonomous = await agentVNextService.autonomousDecision({
-        ...task.payload,
-        autoExecute: true
-      })
+      void (async () => {
+        try {
+          const autonomous = await agentVNextService.autonomousDecision({
+            ...task.payload,
+            autoExecute: true
+          })
 
-      task.autonomous = autonomous
-      task.status = 'tracking'
-      task.updatedAt = new Date().toISOString()
-      runtimeTasks.set(taskId, task)
-      pushRuntimeEvent(taskId, { type: 'TASK_TRACKING', message: '自动执行完成，进入结果追踪' })
+          task.autonomous = autonomous
+          task.status = 'tracking'
+          task.updatedAt = new Date().toISOString()
+          runtimeTasks.set(taskId, task)
+          pushRuntimeEvent(taskId, { type: 'TASK_TRACKING', message: '自动执行完成，进入结果追踪' })
 
-      const outcome = await agentVNextService.recordOutcome({
-        elderlyId: task.payload.elderlyId,
-        strategyMode: task.payload.strategyMode,
-        isOverdue: false,
-        isRelapse: false,
-        familySatisfaction: 4,
-        followUpResult: '自动追踪：已完成一次闭环回写'
-      })
+          const outcome = await agentVNextService.recordOutcome({
+            elderlyId: task.payload.elderlyId,
+            strategyMode: task.payload.strategyMode,
+            isOverdue: false,
+            isRelapse: false,
+            familySatisfaction: 4,
+            followUpResult: '自动追踪：已完成一次闭环回写'
+          })
 
-      task.outcome = outcome
-      task.status = 'done'
-      task.updatedAt = new Date().toISOString()
-      runtimeTasks.set(taskId, task)
-      pushRuntimeEvent(taskId, { type: 'TASK_DONE', message: '任务已完成闭环', data: { outcomeId: outcome?.id } })
+          task.outcome = outcome
+          task.status = 'done'
+          task.updatedAt = new Date().toISOString()
+          runtimeTasks.set(taskId, task)
+          pushRuntimeEvent(taskId, { type: 'TASK_DONE', message: '任务已完成闭环', data: { outcomeId: outcome?.id } })
+        } catch (error: any) {
+          task.status = 'failed'
+          task.updatedAt = new Date().toISOString()
+          runtimeTasks.set(taskId, task)
+          pushRuntimeEvent(taskId, { type: 'TASK_FAILED', message: error?.message || '自动执行失败' })
+        }
+      })()
 
       return sendSuccess(res, {
         taskId,
@@ -194,10 +203,8 @@ router.post('/tasks', authenticate, validateBody({
         traceId: req.traceId,
         summary: plan?.planner?.summary,
         requiresApproval: false,
-        autonomousSummary: autonomous?.plan?.planner?.summary,
-        toolExecution: autonomous?.execution || [],
-        outcomeId: outcome?.id
-      }, '任务已创建并自动执行完成', 201)
+        autoExecute: true
+      }, '任务已创建，自动执行已在后台进行', 201)
     }
 
     task.status = 'pending_approval'

@@ -42,37 +42,49 @@ class AIAgentService {
     }
   }
 
-  private get apiKey() {
+  private get qwenApiKey() {
     return process.env.QWEN_API_KEY || process.env.DASHSCOPE_API_KEY || ''
   }
 
-  private get enabled() {
-    return process.env.AI_AGENT_ENABLED === 'true' || Boolean(this.apiKey)
+  private get deepseekApiKey() {
+    return process.env.DEEPSEEK_API_KEY || ''
   }
 
-  private get model() {
+  private get enabled() {
+    return process.env.AI_AGENT_ENABLED === 'true' || Boolean(this.qwenApiKey) || Boolean(this.deepseekApiKey)
+  }
+
+  private get qwenModel() {
     return process.env.QWEN_MODEL || 'qwen-plus'
   }
 
-  private get baseURL() {
+  private get deepseekModel() {
+    return process.env.DEEPSEEK_MODEL || 'deepseek-chat'
+  }
+
+  private get qwenBaseURL() {
     return process.env.QWEN_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1'
   }
 
+  private get deepseekBaseURL() {
+    return process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/chat/completions'
+  }
+
   private async callQwen(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) {
-    if (!this.enabled || !this.apiKey) {
+    if (!this.enabled || !this.qwenApiKey) {
       throw new Error('AI_AGENT 未启用或缺少 QWEN_API_KEY')
     }
 
     const requestBody = {
-      model: this.model,
+      model: this.qwenModel,
       temperature: 0.3,
       messages
     }
 
     const startedAt = Date.now()
     console.info('[AIAgentService] Qwen request start', {
-      baseURL: this.baseURL,
-      model: this.model,
+      baseURL: this.qwenBaseURL,
+      model: this.qwenModel,
       messageCount: messages.length,
       timeoutMs: 15000,
       firstMessagePreview: messages[0]?.content?.slice(0, 120)
@@ -80,11 +92,11 @@ class AIAgentService {
 
     try {
       const response = await axios.post(
-        `${this.baseURL}/chat/completions`,
+        `${this.qwenBaseURL}/chat/completions`,
         requestBody,
         {
           headers: {
-            Authorization: `Bearer ${this.apiKey}`,
+            Authorization: `Bearer ${this.qwenApiKey}`,
             'Content-Type': 'application/json'
           },
           timeout: 15000
@@ -107,8 +119,64 @@ class AIAgentService {
         status: error?.response?.status,
         data: error?.response?.data,
         message: error?.message,
-        baseURL: this.baseURL,
-        model: this.model
+        baseURL: this.qwenBaseURL,
+        model: this.qwenModel
+      })
+      throw error
+    }
+  }
+
+  private async callDeepseek(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) {
+    if (!this.enabled || !this.deepseekApiKey) {
+      throw new Error('AI_AGENT 未启用或缺少 DEEPSEEK_API_KEY')
+    }
+
+    const requestBody = {
+      model: this.deepseekModel,
+      temperature: 0.3,
+      messages
+    }
+
+    const startedAt = Date.now()
+    console.info('[AIAgentService] Deepseek request start', {
+      baseURL: this.deepseekBaseURL,
+      model: this.deepseekModel,
+      messageCount: messages.length,
+      timeoutMs: 15000,
+      firstMessagePreview: messages[0]?.content?.slice(0, 120)
+    })
+
+    try {
+      const response = await axios.post(
+        this.deepseekBaseURL,
+        requestBody,
+        {
+          headers: {
+            Authorization: `Bearer ${this.deepseekApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 15000
+        }
+      )
+
+      const content = response.data?.choices?.[0]?.message?.content
+      console.info('[AIAgentService] Deepseek request success', {
+        elapsedMs: Date.now() - startedAt,
+        status: response.status,
+        hasContent: Boolean(content)
+      })
+
+      if (!content) throw new Error('模型返回为空')
+
+      return this.parseModelJson(content)
+    } catch (error: any) {
+      console.error('[AIAgentService] Deepseek request failed', {
+        elapsedMs: Date.now() - startedAt,
+        status: error?.response?.status,
+        data: error?.response?.data,
+        message: error?.message,
+        baseURL: this.deepseekBaseURL,
+        model: this.deepseekModel
       })
       throw error
     }
@@ -128,11 +196,31 @@ class AIAgentService {
         _meta: { source: 'qwen' }
       }
     } catch (error: any) {
-      console.error('Qwen triage 调用失败:', {
+      console.error('Qwen triage 调用失败，尝试使用 Deepseek:', {
         status: error?.response?.status,
         data: error?.response?.data,
         message: error?.message
       })
+
+      // 尝试使用 Deepseek 作为备用
+      if (this.deepseekApiKey) {
+        try {
+          const result = await this.callDeepseek([
+            { role: 'system', content: system },
+            { role: 'user', content: user }
+          ])
+          return {
+            ...result,
+            _meta: { source: 'deepseek' }
+          }
+        } catch (deepseekError: any) {
+          console.error('Deepseek triage 调用失败:', {
+            status: deepseekError?.response?.status,
+            data: deepseekError?.response?.data,
+            message: deepseekError?.message
+          })
+        }
+      }
 
       return {
         riskLevel: 'medium',
@@ -163,11 +251,31 @@ class AIAgentService {
         _meta: { source: 'qwen' }
       }
     } catch (error: any) {
-      console.error('Qwen dispatch 调用失败:', {
+      console.error('Qwen dispatch 调用失败，尝试使用 Deepseek:', {
         status: error?.response?.status,
         data: error?.response?.data,
         message: error?.message
       })
+
+      // 尝试使用 Deepseek 作为备用
+      if (this.deepseekApiKey) {
+        try {
+          const result = await this.callDeepseek([
+            { role: 'system', content: system },
+            { role: 'user', content: user }
+          ])
+          return {
+            ...result,
+            _meta: { source: 'deepseek' }
+          }
+        } catch (deepseekError: any) {
+          console.error('Deepseek dispatch 调用失败:', {
+            status: deepseekError?.response?.status,
+            data: deepseekError?.response?.data,
+            message: deepseekError?.message
+          })
+        }
+      }
 
       return {
         assigneeRole: input.module === '医护' ? `${input.shift}值班医生` : `${input.shift}护理员`,
@@ -198,11 +306,31 @@ class AIAgentService {
         _meta: { source: 'qwen' }
       }
     } catch (error: any) {
-      console.error('Qwen answer 调用失败:', {
+      console.error('Qwen answer 调用失败，尝试使用 Deepseek:', {
         status: error?.response?.status,
         data: error?.response?.data,
         message: error?.message
       })
+
+      // 尝试使用 Deepseek 作为备用
+      if (this.deepseekApiKey) {
+        try {
+          const result = await this.callDeepseek([
+            { role: 'system', content: system },
+            { role: 'user', content: user }
+          ])
+          return {
+            ...result,
+            _meta: { source: 'deepseek' }
+          }
+        } catch (deepseekError: any) {
+          console.error('Deepseek answer 调用失败:', {
+            status: deepseekError?.response?.status,
+            data: deepseekError?.response?.data,
+            message: deepseekError?.message
+          })
+        }
+      }
 
       const q = String(input.question || '')
       const riskKeywords = ['血压', '跌倒', '胸痛', '呼吸', '高危', '发烧', '意识']

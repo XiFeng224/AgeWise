@@ -63,27 +63,55 @@ class AIAgentService {
       throw new Error('AI_AGENT 未启用或缺少 QWEN_API_KEY')
     }
 
-    const response = await axios.post(
-      `${this.baseURL}/chat/completions`,
-      {
-        model: this.model,
-        temperature: 0.3,
-        response_format: { type: 'json_object' },
-        messages
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 8000
-      }
-    )
+    const requestBody = {
+      model: this.model,
+      temperature: 0.3,
+      messages
+    }
 
-    const content = response.data?.choices?.[0]?.message?.content
-    if (!content) throw new Error('模型返回为空')
+    const startedAt = Date.now()
+    console.info('[AIAgentService] Qwen request start', {
+      baseURL: this.baseURL,
+      model: this.model,
+      messageCount: messages.length,
+      timeoutMs: 15000,
+      firstMessagePreview: messages[0]?.content?.slice(0, 120)
+    })
 
-    return this.parseModelJson(content)
+    try {
+      const response = await axios.post(
+        `${this.baseURL}/chat/completions`,
+        requestBody,
+        {
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 15000
+        }
+      )
+
+      const content = response.data?.choices?.[0]?.message?.content
+      console.info('[AIAgentService] Qwen request success', {
+        elapsedMs: Date.now() - startedAt,
+        status: response.status,
+        hasContent: Boolean(content)
+      })
+
+      if (!content) throw new Error('模型返回为空')
+
+      return this.parseModelJson(content)
+    } catch (error: any) {
+      console.error('[AIAgentService] Qwen request failed', {
+        elapsedMs: Date.now() - startedAt,
+        status: error?.response?.status,
+        data: error?.response?.data,
+        message: error?.message,
+        baseURL: this.baseURL,
+        model: this.model
+      })
+      throw error
+    }
   }
 
   async triage(input: TriageInput) {

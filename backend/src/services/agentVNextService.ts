@@ -324,9 +324,19 @@ class AgentVNextService {
       .slice(0, 5)
       .map((p: any) => p.name)
 
-    let decision: any
-    try {
-      const qwenSummary = await aiAgentQwenService.answer({
+    const fallbackDecision = {
+      triage: { actions: ['先完成关键体征复测并评估风险等级'] },
+      dispatch: { steps: ['安排值班人员执行首轮处置', '2小时内完成复测复核'] },
+      copilot: {
+        summary: '模型服务暂时不可用，已给出规则化兜底处置建议。',
+        communication: '已启动基础处置流程，请保持电话畅通。',
+        _meta: { source: 'fallback' }
+      }
+    }
+
+    let decision: any = fallbackDecision
+    const qwenSummary = await Promise.race([
+      aiAgentQwenService.answer({
         question: `请为养老机构运行台生成任务规划摘要。事件：${input.eventSummary}`,
         context: {
           elderlyId: input.elderlyId,
@@ -339,61 +349,55 @@ class AgentVNextService {
           sourceAnswer: input.sourceAnswer || '',
           sourceSuggestedAction: input.sourceSuggestedAction || []
         }
-      }).catch((error: any) => ({
-        answer: '模型摘要生成失败，已启用兜底规划。',
-        summary: '模型摘要生成失败，已启用兜底规划。',
-        _meta: { source: 'fallback', message: error?.message || 'unknown' }
-      }))
+      }),
+      new Promise((resolve) => setTimeout(() => resolve(null), 3500))
+    ]).catch((error: any) => ({
+      answer: '',
+      summary: '',
+      _meta: { source: 'fallback', message: error?.message || 'unknown' }
+    }))
 
-      decision = await aiAgentService.fullDecision({
-        triageInput: {
-          elderlyName: context.profile.name,
-          age: context.profile.age,
-          metrics: context.metrics24h,
-          historySummary: context.profile.notes || '暂无病史摘要'
-        },
-        dispatchInput: {
-          riskLevel: risk,
-          module,
-          shift: duty.shift as '白班' | '晚班' | '夜班',
-          availableRoles,
-          eventSummary: input.eventSummary
-        },
-        copilotQuestion: '请给出步骤化执行计划（10分钟、30分钟、2小时、24小时），并输出重点行动。',
-        context: {
-          strategyMode,
-          profile: context.profile,
-          warnings: context.warningHistory.slice(0, 5),
-          providers: availableRoles,
-          references,
-          sourceQuery: input.sourceQuery || '',
-          sourceAnswer: input.sourceAnswer || '',
-          sourceSuggestedAction: input.sourceSuggestedAction || [],
-          modelPreference
-        }
-      }).catch((error: any) => ({
-        triage: { actions: ['先完成关键体征复测并评估风险等级'] },
-        dispatch: { steps: ['安排值班人员执行首轮处置', '2小时内完成复测复核'] },
-        copilot: {
-          summary: '模型服务暂时不可用，已给出规则化兜底处置建议。',
-          communication: '已启动基础处置流程，请保持电话畅通。',
-          _meta: { source: 'fallback', message: error?.message || 'unknown' }
-        }
-      }))
+    decision = await aiAgentService.fullDecision({
+      triageInput: {
+        elderlyName: context.profile.name,
+        age: context.profile.age,
+        metrics: context.metrics24h,
+        historySummary: context.profile.notes || '暂无病史摘要'
+      },
+      dispatchInput: {
+        riskLevel: risk,
+        module,
+        shift: duty.shift as '白班' | '晚班' | '夜班',
+        availableRoles,
+        eventSummary: input.eventSummary
+      },
+      copilotQuestion: '请给出步骤化执行计划（10分钟、30分钟、2小时、24小时），并输出重点行动。',
+      context: {
+        strategyMode,
+        profile: context.profile,
+        warnings: context.warningHistory.slice(0, 5),
+        providers: availableRoles,
+        references,
+        sourceQuery: input.sourceQuery || '',
+        sourceAnswer: input.sourceAnswer || '',
+        sourceSuggestedAction: input.sourceSuggestedAction || [],
+        modelPreference
+      }
+    }).catch((error: any) => ({
+      triage: { actions: ['先完成关键体征复测并评估风险等级'] },
+      dispatch: { steps: ['安排值班人员执行首轮处置', '2小时内完成复测复核'] },
+      copilot: {
+        summary: '模型服务暂时不可用，已给出规则化兜底处置建议。',
+        communication: '已启动基础处置流程，请保持电话畅通。',
+        _meta: { source: 'fallback', message: error?.message || 'unknown' }
+      }
+    }))
+
+    if (qwenSummary) {
       decision.copilot = {
         ...decision.copilot,
         summary: qwenSummary?.answer || qwenSummary?.summary || decision?.copilot?.summary,
         _meta: { ...(decision?.copilot?._meta || {}), source: qwenSummary?._meta?.source || 'qwen' }
-      }
-    } catch {
-      decision = {
-        triage: { actions: ['先完成关键体征复测并评估风险等级'] },
-        dispatch: { steps: ['安排值班人员执行首轮处置', '2小时内完成复测复核'] },
-        copilot: {
-          summary: '模型服务暂时不可用，已给出规则化兜底处置建议。',
-          communication: '已启动基础处置流程，请保持电话畅通。',
-          _meta: { source: 'fallback' }
-        }
       }
     }
 

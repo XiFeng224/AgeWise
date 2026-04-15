@@ -394,10 +394,11 @@ class AgentVNextService {
     }))
 
     if (qwenSummary) {
+      const typedQwenSummary = qwenSummary as { answer?: string; _meta?: { source?: string } }
       decision.copilot = {
         ...decision.copilot,
-        summary: qwenSummary?.answer || qwenSummary?.summary || decision?.copilot?.summary,
-        _meta: { ...(decision?.copilot?._meta || {}), source: qwenSummary?._meta?.source || 'qwen' }
+        summary: typedQwenSummary?.answer || decision?.copilot?.summary,
+        _meta: { ...(decision?.copilot?._meta || {}), source: typedQwenSummary?._meta?.source || 'qwen' }
       }
     }
 

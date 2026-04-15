@@ -118,6 +118,15 @@ const mockVideos: VideoItem[] = [
   }
 ];
 
+const MedicalProtection = () => {
+  const [searchText, setSearchText] = useState('');
+  const [category, setCategory] = useState('all');
+  const [selectedTag, setSelectedTag] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [activeVideo, setActiveVideo] = useState<VideoItem | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
   const allTags = useMemo(() => Array.from(new Set(mockVideos.flatMap((video) => video.tags))), []);
   const categories = useMemo(() => Array.from(new Set(mockVideos.map((video) => video.category))), []);
   const filteredVideos = useMemo(() => {
@@ -151,33 +160,32 @@ const mockVideos: VideoItem[] = [
     return () => clearTimeout(timer);
   }, []);
 
-  // 处理视频点击
   const handleVideoClick = (video: VideoItem) => {
-    setActiveVideo(video)
-    setPlaying(false)
-    message.info(`正在准备播放视频：${video.title}`)
+    setActiveVideo(video);
+    setPlaying(false);
+    message.info(`正在准备播放视频：${video.title}`);
   };
 
   const handleTogglePlay = async () => {
-    if (!videoRef.current) return
+    if (!videoRef.current) return;
     if (playing) {
-      videoRef.current.pause()
-      setPlaying(false)
-      return
+      videoRef.current.pause();
+      setPlaying(false);
+      return;
     }
     try {
-      await videoRef.current.play()
-      setPlaying(true)
+      await videoRef.current.play();
+      setPlaying(true);
     } catch {
-      message.warning('当前视频暂时无法自动播放，请点击视频区域或检查浏览器设置')
+      message.warning('当前视频暂时无法自动播放，请点击视频区域或检查浏览器设置');
     }
-  }
+  };
 
   const handleReloadVideo = () => {
-    if (!videoRef.current) return
-    videoRef.current.load()
-    setPlaying(false)
-  }
+    if (!videoRef.current) return;
+    videoRef.current.load();
+    setPlaying(false);
+  };
 
   return (
     <Content className="medical-protection-content">
@@ -303,9 +311,9 @@ const mockVideos: VideoItem[] = [
                   className="medical-protection-video-card"
                   cover={
                     <div className="video-cover-container" onClick={() => handleVideoClick(video)}>
-                      <img 
-                        src={video.cover} 
-                        alt={video.title} 
+                      <img
+                        src={video.cover}
+                        alt={video.title}
                         className="video-cover"
                       />
                       <div className="video-overlay">

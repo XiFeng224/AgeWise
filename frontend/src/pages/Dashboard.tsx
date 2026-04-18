@@ -17,9 +17,6 @@ const { Title, Text } = Typography
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate()
-  const [introVisible, setIntroVisible] = React.useState(false)
-
-  const closeIntro = () => setIntroVisible(false)
 
   const openIntro = () => {
     Modal.info({

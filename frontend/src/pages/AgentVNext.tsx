@@ -10,7 +10,6 @@ import {
   Typography,
   Alert,
   Descriptions,
-  message,
   Tag,
   Timeline,
   Statistic,

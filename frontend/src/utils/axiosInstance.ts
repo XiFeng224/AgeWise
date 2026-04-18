@@ -10,6 +10,7 @@ const emitGlobalError = (text: string) => {
 
 type ExtendedAxiosRequestConfig = AxiosRequestConfig & {
   suppressGlobalError?: boolean
+  _retry?: boolean
 }
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '/api'
@@ -77,6 +78,9 @@ axiosInstance.interceptors.response.use(
 
       try {
         const newToken = await refreshToken()
+        if (!originalRequest.headers) {
+          originalRequest.headers = {}
+        }
         originalRequest.headers.Authorization = `Bearer ${newToken}`
         return axiosInstance(originalRequest)
       } catch (refreshError) {

@@ -16,7 +16,7 @@ interface HealthDataInput {
 }
 
 interface ActivityDataInput {
-  activityType: 'no_activity' | 'frequent_bathroom' | 'fall_risk'
+  activityType: 'movement' | 'rest' | 'bathroom' | 'kitchen' | 'bedroom' | 'no_activity' | 'frequent_bathroom' | 'fall_risk' | 'night_activity'
   duration?: number
   count?: number
 }

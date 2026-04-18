@@ -8,7 +8,6 @@ import {
   BarChartOutlined,
   SettingOutlined,
   IdcardOutlined,
-  AppstoreOutlined,
   HeartOutlined,
   BellOutlined,
   AlertOutlined,

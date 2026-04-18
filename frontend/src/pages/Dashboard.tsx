@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Row, Col, Card, Statistic, Typography, Button, Space, Alert, Timeline, Tag, Progress } from 'antd'
+import { Row, Col, Card, Statistic, Typography, Button, Space, Alert, Timeline, Tag, Progress, Modal } from 'antd'
 import {
   RobotOutlined,
   PlayCircleOutlined,
@@ -17,6 +17,25 @@ const { Title, Text } = Typography
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate()
+  const [introVisible, setIntroVisible] = React.useState(false)
+
+  const closeIntro = () => setIntroVisible(false)
+
+  const openIntro = () => {
+    Modal.info({
+      title: '银龄智护 Agent 平台简介',
+      width: 720,
+      content: (
+        <div style={{ lineHeight: 1.8 }}>
+          <p>这是一个面向社区养老场景的 Agent 平台，核心不是单纯查询数据，而是持续感知、分析、预警、决策、执行并追踪闭环。</p>
+          <p><strong>平台能力：</strong>主动感知门磁/水表/床垫等设备数据，结合健康指标、服务记录和预警记录，自动生成风险分析与处置建议。</p>
+          <p><strong>典型流程：</strong>数据感知 → 风险分析 Agent → 风险预警 Agent → 运行台生成任务 → 指挥中心调度 → 结果回写与复盘。</p>
+          <p><strong>适用角色：</strong>老人、家属、社区医生、网格员、管理者。</p>
+        </div>
+      ),
+      okText: '知道了'
+    })
+  }
 
   const kpi = useMemo(() => ({
     todayPlans: 26,
@@ -47,17 +66,18 @@ const Dashboard: React.FC = () => {
         <div className="welcome-content">
           <div className="welcome-text">
             <Title level={2} className="welcome-title">银龄智护 Agent 平台</Title>
-            <Text className="welcome-subtitle">面向社区养老的智能体编排、执行与治理平台</Text>
+            <Text className="welcome-subtitle">面向社区养老的数据分析、主动预警与任务闭环智能体平台</Text>
             <Text className="welcome-desc">
-              以 Agent 为核心：从感知任务、生成计划，到调用工具执行与结果回写，形成可治理的闭环运行体系。
+              这是一个以 Agent 为核心的养老业务系统：持续感知数据、分析风险、生成建议、调度任务并回写结果，形成可解释、可执行、可追踪的闭环。
             </Text>
             <Space style={{ marginTop: 12 }} wrap>
               <Button type="primary" icon={<PlayCircleOutlined />} onClick={() => navigate('/agent/vnext')}>
-                进入智能体运行台
+                进入 Agent 运行台
               </Button>
               <Button icon={<RobotOutlined />} onClick={() => navigate('/agent/command')}>
-                进入智能体指挥中心
+                进入 Agent 指挥中心
               </Button>
+              <Button onClick={openIntro}>查看平台简介</Button>
             </Space>
           </div>
           <div className="welcome-image">
@@ -77,7 +97,7 @@ const Dashboard: React.FC = () => {
                 <Tag color="purple">记忆</Tag>
                 <Tag color="cyan">运行中</Tag>
               </Space>
-              <Text strong>Agent 门户已启动：任务提交 → 审批执行 → 事件回流 → 结果追踪</Text>
+              <Text strong>Agent 门户已启动：感知数据 → 风险分析 Agent → 计划生成 → 任务执行 → 结果追踪</Text>
               <Progress percent={missionProgress} size="small" strokeColor="#4f79a7" />
             </Space>
           </Card>
@@ -86,7 +106,7 @@ const Dashboard: React.FC = () => {
           <Card title="当前会话状态" style={{ borderRadius: 18 }}>
             <Space direction="vertical" style={{ width: '100%' }}>
               <Tag color="processing">任务运行中</Tag>
-              <Text type="secondary">这是一个面向社区养老任务的智能体门户，而不是传统管理首页。</Text>
+              <Text type="secondary">这是一个面向社区养老数据分析与主动预警的智能体门户，而不是传统管理首页。</Text>
             </Space>
           </Card>
         </Col>
@@ -96,15 +116,45 @@ const Dashboard: React.FC = () => {
         showIcon
         type="success"
         style={{ marginBottom: 16 }}
-        message="推荐演示路径：首页（Agent 平台门户）→ 运行台 → 启动任务 → 查看实时事件流与结果追踪"
+        message="推荐演示路径：首页（Agent 平台门户）→ 风险分析 Agent → 一键生成 Agent 任务 → 运行台执行闭环 → 主动预警复盘"
       />
+
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} md={8}>
+          <Card style={{ borderRadius: 18 }}>
+            <Space direction="vertical" size={6}>
+              <Tag color="blue">核心价值1</Tag>
+              <Text strong>主动感知</Text>
+              <Text type="secondary">门磁、水表、床垫与健康数据联动，异常自动触发预警。</Text>
+            </Space>
+          </Card>
+        </Col>
+        <Col xs={24} md={8}>
+          <Card style={{ borderRadius: 18 }}>
+            <Space direction="vertical" size={6}>
+              <Tag color="gold">核心价值2</Tag>
+              <Text strong>可解释分析</Text>
+              <Text type="secondary">输出风险分、趋势、异常依据与责任人建议，便于一线执行。</Text>
+            </Space>
+          </Card>
+        </Col>
+        <Col xs={24} md={8}>
+          <Card style={{ borderRadius: 18 }}>
+            <Space direction="vertical" size={6}>
+              <Tag color="green">核心价值3</Tag>
+              <Text strong>闭环执行</Text>
+              <Text type="secondary">一键生成任务、派单、通知与回写复盘，形成完整运营闭环。</Text>
+            </Space>
+          </Card>
+        </Col>
+      </Row>
 
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} lg={8}>
           <Card style={{ borderRadius: 18 }}>
             <Space direction="vertical" style={{ width: '100%' }}>
               <Tag color="processing">运行中 Agent 门户</Tag>
-              <Text strong>当前策略：自动感知 → 计划审批 → 工具执行 → 结果回写</Text>
+              <Text strong>当前策略：自动感知 → 风险评估 → 计划建议 → 工具执行 → 结果回写</Text>
               <Progress percent={missionProgress} strokeColor="#4f79a7" />
             </Space>
           </Card>

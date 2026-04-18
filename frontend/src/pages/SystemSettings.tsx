@@ -12,7 +12,7 @@ import {
   Divider,
   Row,
   Col,
-  message,
+  App,
   List,
   Tag,
   Table
@@ -27,6 +27,8 @@ const { Title } = Typography
 const { Option } = Select
 
 const SystemSettings: React.FC = () => {
+  const { message } = App.useApp()
+
   const currentUser = (() => {
     try {
       return JSON.parse(localStorage.getItem('user') || '{}')

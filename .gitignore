@@ -42,3 +42,7 @@ coverage/
 
 # TypeScript 编译输出
 *.tsbuildinfo
+
+# Python 缓存文件
+__pycache__/
+*.pyc

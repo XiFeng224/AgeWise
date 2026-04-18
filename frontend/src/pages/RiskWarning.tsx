@@ -38,6 +38,7 @@ interface WarningItem {
   id: number
   elderlyId: number
   warningType: string
+  warningTypeZh?: string
   riskLevel: 'low' | 'medium' | 'high'
   title: string
   description: string
@@ -56,6 +57,27 @@ interface WarningItem {
     realName: string
   }
   createdAt?: string
+}
+
+const warningTypeLabelMap: Record<string, string> = {
+  health_abnormal: '健康异常',
+  activity_abnormal: '活动异常',
+  medication_abnormal: '用药异常',
+  emotion_abnormal: '情绪异常',
+  cognitive_decline: '认知衰退',
+  environment_risk: '环境风险',
+  medical_urgent: '医疗紧急',
+  fall_risk: '跌倒风险',
+  stroke_risk: '中风风险',
+  door_contact: '门磁异常',
+  water_meter: '用水异常',
+  mattress_risk: '床垫异常',
+  service_gap: '服务空窗'
+}
+
+const toWarningTypeZh = (type?: string) => {
+  if (!type) return '-'
+  return warningTypeLabelMap[type] || type
 }
 
 const RiskWarning: React.FC = () => {
@@ -215,7 +237,8 @@ const RiskWarning: React.FC = () => {
     {
       title: '预警类型',
       dataIndex: 'warningType',
-      key: 'warningType'
+      key: 'warningType',
+      render: (value: string, record: WarningItem) => record.warningTypeZh || toWarningTypeZh(value)
     },
     {
       title: '风险等级',
@@ -272,7 +295,7 @@ const RiskWarning: React.FC = () => {
 
   return (
     <div>
-      <Title level={2}>风险预警管理</Title>
+      <Title level={2}>社区养老主动预警 Agent</Title>
 
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col span={6}>
@@ -388,12 +411,37 @@ const RiskWarning: React.FC = () => {
         </Col>
       </Row>
 
+      <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Col span={24}>
+          <Card title="预警类型分布（中文）">
+            <ReactECharts
+              style={{ height: 280 }}
+              option={{
+                tooltip: { trigger: 'item' },
+                legend: { bottom: 0 },
+                series: [
+                  {
+                    type: 'pie',
+                    radius: ['45%', '70%'],
+                    data: (warningStats?.warningType || []).map((item: any) => ({
+                      name: item.warningTypeZh || toWarningTypeZh(item.warningType),
+                      value: Number(item.count)
+                    }))
+                  }
+                ]
+              }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
       <Card
         title="预警列表"
         extra={
           <Space>
             <Button onClick={() => navigate('/query')}>去智能问答</Button>
             <Button type="primary" onClick={() => navigate('/agent/vnext')}>去运行台处置</Button>
+            <Button onClick={() => navigate('/agent-workbench')}>去总控工作台</Button>
             <DatePicker.RangePicker
               value={dateRange}
               presets={[
@@ -457,7 +505,7 @@ const RiskWarning: React.FC = () => {
         {detailData ? (
           <div>
             <p><strong>老人：</strong>{detailData.elderly?.name}（{detailData.elderly?.age}岁）</p>
-            <p><strong>预警类型：</strong>{detailData.warningType}</p>
+            <p><strong>预警类型：</strong>{detailData.warningTypeZh || toWarningTypeZh(detailData.warningType)}</p>
             <p><strong>风险等级：</strong>{detailData.riskLevel}</p>
             <p><strong>当前状态：</strong>{detailData.status}</p>
             <p><strong>回访时间：</strong>{detailData.followUpAt ? new Date(detailData.followUpAt).toLocaleString() : '未填写'}</p>
@@ -494,7 +542,7 @@ const RiskWarning: React.FC = () => {
               <Input value={`${currentWarning.elderly?.name || `老人#${currentWarning.elderlyId}`} (${currentWarning.elderly?.age || '-'}岁)`} disabled />
             </Form.Item>
             <Form.Item label="预警类型">
-              <Input value={currentWarning.warningType} disabled />
+              <Input value={currentWarning.warningTypeZh || toWarningTypeZh(currentWarning.warningType)} disabled />
             </Form.Item>
             <Form.Item label="状态流转">
               <Select

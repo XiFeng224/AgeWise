@@ -7,7 +7,15 @@ import {
   UserOutlined,
   BarChartOutlined,
   SettingOutlined,
-  IdcardOutlined
+  IdcardOutlined,
+  AppstoreOutlined,
+  HeartOutlined,
+  BellOutlined,
+  AlertOutlined,
+  FileProtectOutlined,
+  RobotOutlined,
+  CheckCircleOutlined,
+  QuestionCircleOutlined
 } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 
@@ -29,9 +37,9 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, userRole = 'grid' 
         label: '系统概览'
       },
       {
-        key: '/query',
-        icon: React.createElement(SearchOutlined),
-        label: '数据查询'
+        key: '/elderly',
+        icon: React.createElement(UserOutlined),
+        label: '老人管理'
       },
       {
         key: '/risk',
@@ -39,14 +47,63 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, userRole = 'grid' 
         label: '风险预警'
       },
       {
-        key: '/elderly',
-        icon: React.createElement(UserOutlined),
-        label: '老人管理'
+        key: '/health',
+        icon: React.createElement(HeartOutlined),
+        label: '健康档案'
+      },
+      {
+        key: '/risk-analysis',
+        icon: React.createElement(AlertOutlined),
+        label: '风险分析'
+      },
+      {
+        key: '/medical-protection',
+        icon: React.createElement(FileProtectOutlined),
+        label: '医疗保障'
+      },
+      {
+        key: '/query',
+        icon: React.createElement(SearchOutlined),
+        label: '数据查询'
       },
       {
         key: '/statistics',
         icon: React.createElement(BarChartOutlined),
         label: '数据统计'
+      },
+      {
+        key: '/notifications',
+        icon: React.createElement(BellOutlined),
+        label: '通知中心'
+      },
+      {
+        key: '/agent',
+        icon: React.createElement(RobotOutlined),
+        label: 'Agent 工作台',
+        children: [
+          {
+            key: '/agent',
+            label: 'Agent 工作台'
+          },
+          {
+            key: '/agent/command',
+            label: '命令中心'
+          },
+          {
+            key: '/agent/vnext',
+            label: 'Agent 运行台'
+          }
+        ]
+      },
+      {
+        key: '/system-status',
+        icon: React.createElement(CheckCircleOutlined),
+        label: '系统状态'
+      },
+      {
+        key: '/help',
+        icon: React.createElement(QuestionCircleOutlined),
+        label: '帮助中心'
       },
       {
         key: '/profile',
@@ -74,7 +131,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, userRole = 'grid' 
   return React.createElement(Menu, {
     mode: "inline",
     selectedKeys: [location.pathname],
-    defaultOpenKeys: ['data'],
+    defaultOpenKeys: ['/agent'],
     inlineCollapsed: collapsed,
     items: getMenuItems(),
     onClick: handleMenuClick,

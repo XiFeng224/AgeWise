@@ -1,5 +1,5 @@
-import { Notification, User, Warning, Elderly } from '../models'
-import { Op } from 'sequelize'
+import { Notification, User, Elderly } from '../models'
+import { Op, WhereOptions } from 'sequelize'
 
 class NotificationService {
   /**
@@ -53,7 +53,7 @@ class NotificationService {
    * 发送预警通知
    * @param warning 预警对象
    */
-  async sendWarningNotification(warning: any): Promise<void> {
+  async sendWarningNotification(warning: { elderlyId: number; riskLevel: string; id: number }): Promise<void> {
     try {
       // 获取老人信息
       const elderly = await Elderly.findByPk(warning.elderlyId)
@@ -99,7 +99,7 @@ class NotificationService {
    */
   async getUserNotifications(userId: number, page: number = 1, limit: number = 20, isRead?: boolean): Promise<{ total: number; notifications: Notification[] }> {
     try {
-      const where: any = { userId }
+      const where: WhereOptions = { userId }
       if (isRead !== undefined) {
         where.isRead = isRead
       }

@@ -108,7 +108,7 @@ class EmotionService {
   // 分析情绪趋势
   private analyzeEmotionTrend(records: EmotionRecord[]) {
     if (records.length === 0) {
-      return { trend: 'stable', dominantEmotion: 'neutral', riskLevel: 'low' }
+      return { trend: 'stable' as const, dominantEmotion: 'neutral' as const, riskLevel: 'low' as const, avgIntensity: 0 }
     }
     
     // 计算情绪分布
@@ -169,7 +169,7 @@ class EmotionService {
         trend: data.trend.trend,
         avgIntensity: data.trend.avgIntensity,
         recordCount: data.records.length,
-        recommendations: this.generateEmotionRecommendations(data.trend)
+        recommendations: this.generateEmotionRecommendations(data.trend as { riskLevel: 'low' | 'medium' | 'high'; trend: 'improving' | 'deteriorating' | 'stable'; dominantEmotion: 'happy' | 'sad' | 'anxious' | 'angry' | 'neutral' })
       }
       
       return { success: true, data: report }
@@ -180,7 +180,7 @@ class EmotionService {
   }
 
   // 生成情绪建议
-  private generateEmotionRecommendations(trend: any): string[] {
+  private generateEmotionRecommendations(trend: { riskLevel: 'low' | 'medium' | 'high'; trend: 'improving' | 'deteriorating' | 'stable'; dominantEmotion: 'happy' | 'sad' | 'anxious' | 'angry' | 'neutral' }): string[] {
     const recommendations: string[] = []
     
     if (trend.riskLevel === 'high') {

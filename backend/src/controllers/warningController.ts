@@ -341,13 +341,36 @@ const getWarningStats = async (req: Request, res: Response) => {
     ]
 
     // 按预警类型统计
-    const warningTypeStats = await Warning.findAll({
+    const warningTypeRows = await Warning.findAll({
       where: dateCondition,
       attributes: ['warningType', [sequelize.fn('COUNT', sequelize.col('id')), 'count']],
       group: ['warningType'],
       order: [[sequelize.fn('COUNT', sequelize.col('id')), 'DESC']],
-      limit: 10
-    })
+      limit: 10,
+      raw: true
+    }) as unknown as Array<{ warningType: string; count: number | string }>
+
+    const warningTypeLabelMap: Record<string, string> = {
+      health_abnormal: '健康异常',
+      activity_abnormal: '活动异常',
+      medication_abnormal: '用药异常',
+      emotion_abnormal: '情绪异常',
+      cognitive_decline: '认知衰退',
+      environment_risk: '环境风险',
+      medical_urgent: '医疗紧急',
+      fall_risk: '跌倒风险',
+      stroke_risk: '中风风险',
+      door_contact: '门磁异常',
+      water_meter: '用水异常',
+      mattress_risk: '床垫异常',
+      service_gap: '服务空窗'
+    }
+
+    const warningTypeStats = warningTypeRows.map((row) => ({
+      warningType: row.warningType,
+      warningTypeZh: warningTypeLabelMap[row.warningType] || row.warningType,
+      count: Number(row.count) || 0
+    }))
 
     // 最近7天预警趋势（按天聚合）
     const sevenDaysAgo = new Date()
@@ -361,11 +384,11 @@ const getWarningStats = async (req: Request, res: Response) => {
         }
       },
       attributes: [
-        [fn('DATE', col('createdAt')), 'date'],
+        [fn('DATE', col('created_at')), 'date'],
         [fn('COUNT', col('id')), 'count']
       ],
-      group: [fn('DATE', col('createdAt'))],
-      order: [[fn('DATE', col('createdAt')), 'ASC']],
+      group: [fn('DATE', col('created_at'))],
+      order: [[fn('DATE', col('created_at')), 'ASC']],
       raw: true
     }) as unknown as Array<{ date: string; count: number }>
 

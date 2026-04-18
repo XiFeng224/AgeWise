@@ -1,4 +1,4 @@
-import { User, Elderly, Warning, ServiceRecord, HealthRecord } from '../models'
+import { Elderly, Warning, ServiceRecord, HealthRecord } from '../models'
 import { Op } from 'sequelize'
 import { spawn } from 'child_process'
 import path from 'path'
@@ -161,23 +161,23 @@ class AgentService {
   /**
    * 调用千问进行意图识别
    */
-  private async callPreferredModel(query: string, preference: string, context: { deepThink: boolean; searchMode: boolean }): Promise<AgentModelResult | null> {
+  private async callPreferredModel(query: string, preference: string, _context: { deepThink: boolean; searchMode: boolean }): Promise<AgentModelResult | null> {
     if (preference === 'qwen' || preference === 'auto') {
-      const qwenResult = await this.callQwenAgent(query, context)
+      const qwenResult = await this.callQwenAgent(query)
       if (qwenResult?.intent) return qwenResult
     }
     if (preference === 'deepseek') {
-      const deepseek = await this.callDeepSeekAgent(query, context)
+      const deepseek = await this.callDeepSeekAgent(query)
       if (deepseek?.intent) return deepseek
     }
     if (preference === 'moonshot') {
-      const moonshot = await this.callMoonshotAgent(query, context)
+      const moonshot = await this.callMoonshotAgent(query)
       if (moonshot?.intent) return moonshot
     }
     return null
   }
 
-  private async callQwenAgent(query: string, context: { deepThink: boolean; searchMode: boolean } = { deepThink: false, searchMode: false }): Promise<AgentModelResult | null> {
+  private async callQwenAgent(query: string): Promise<AgentModelResult | null> {
     try {
       if (!QWEN_API_KEY) return null
 
@@ -229,6 +229,7 @@ class AgentService {
     if (!result || typeof result !== 'object') return null
 
     const raw = result as Partial<AgentModelResult>
+    const rawObject: Record<string, unknown> = { ...raw }
     const intent = typeof raw.intent === 'string' ? raw.intent : 'query_elderly_info'
     const confidence = typeof raw.confidence === 'number' ? raw.confidence : 0.8
     const followUpType = typeof raw.follow_up_type === 'string'
@@ -238,7 +239,7 @@ class AgentService {
     const needsFollowUp = raw.needs_follow_up !== false
 
     return {
-      ...(raw as AgentModelResult),
+      ...(rawObject as AgentModelResult),
       intent,
       type: intent,
       confidence,
@@ -291,7 +292,7 @@ class AgentService {
     return actions
   }
 
-  private async callDeepSeekAgent(query: string, context: { deepThink: boolean; searchMode: boolean }): Promise<AgentModelResult | null> {
+  private async callDeepSeekAgent(query: string): Promise<AgentModelResult | null> {
     try {
       if (!DEEPSEEK_API_KEY) return null
 
@@ -313,8 +314,8 @@ class AgentService {
               content: query
             }
           ],
-          temperature: context.deepThink ? 0.2 : 0.1,
-          top_p: context.searchMode ? 0.9 : 0.8
+          temperature: 0.1,
+          top_p: 0.8
         })
       })
 
@@ -335,8 +336,8 @@ class AgentService {
     }
   }
 
-  private async callMoonshotAgent(query: string, context: { deepThink: boolean; searchMode: boolean }): Promise<AgentModelResult | null> {
-    return this.callQwenAgent(query, context)
+  private async callMoonshotAgent(query: string): Promise<AgentModelResult | null> {
+    return this.callQwenAgent(query)
       .then((result) => result ? { ...result, modelSource: 'moonshot' } : null)
       .catch(() => null)
   }
@@ -478,31 +479,37 @@ class AgentService {
       const intentValue = 'intent' in input && typeof input.intent === 'string' && input.intent ? input.intent : undefined
       const resolvedIntent = intentValue || typeValue || 'query_elderly_info'
 
-      return {
+      const result: AgentModelResult = {
         type: resolvedIntent,
-        intent: resolvedIntent,
-        sql_hint: typeof (input as AgentModelResult).sql_hint === 'string' ? (input as AgentModelResult).sql_hint : undefined,
-        modelSource: typeof (input as AgentModelResult).modelSource === 'string' ? (input as AgentModelResult).modelSource : undefined,
-        entities: typeof (input as AgentModelResult).entities === 'object' && (input as AgentModelResult).entities !== null
-          ? (input as AgentModelResult).entities
-          : undefined,
-        confidence: typeof (input as AgentModelResult).confidence === 'number' ? (input as AgentModelResult).confidence : undefined,
-        follow_up_type: typeof (input as AgentModelResult).follow_up_type === 'string' ? (input as AgentModelResult).follow_up_type : undefined,
-        needs_follow_up: typeof (input as AgentModelResult).needs_follow_up === 'boolean' ? (input as AgentModelResult).needs_follow_up : undefined
+        intent: resolvedIntent
       }
+
+      // 只在input是AgentModelResult类型时才访问其属性
+      if ('sql_hint' in input && typeof input.sql_hint === 'string') {
+        result.sql_hint = input.sql_hint
+      }
+      if ('modelSource' in input && typeof input.modelSource === 'string') {
+        result.modelSource = input.modelSource
+      }
+      if ('entities' in input && typeof input.entities === 'object' && input.entities !== null) {
+        result.entities = input.entities
+      }
+      if ('confidence' in input && typeof input.confidence === 'number') {
+        result.confidence = input.confidence
+      }
+      if ('follow_up_type' in input && typeof input.follow_up_type === 'string') {
+        result.follow_up_type = input.follow_up_type
+      }
+      if ('needs_follow_up' in input && typeof input.needs_follow_up === 'boolean') {
+        result.needs_follow_up = input.needs_follow_up
+      }
+
+      return result
     }
 
     return {
       type: 'query_elderly_info',
-      intent: 'query_elderly_info',
-      sql_hint: typeof (input as AgentModelResult).sql_hint === 'string' ? (input as AgentModelResult).sql_hint : undefined,
-      modelSource: typeof (input as AgentModelResult).modelSource === 'string' ? (input as AgentModelResult).modelSource : undefined,
-      entities: typeof (input as AgentModelResult).entities === 'object' && (input as AgentModelResult).entities !== null
-        ? (input as AgentModelResult).entities
-        : undefined,
-      confidence: typeof (input as AgentModelResult).confidence === 'number' ? (input as AgentModelResult).confidence : undefined,
-      follow_up_type: typeof (input as AgentModelResult).follow_up_type === 'string' ? (input as AgentModelResult).follow_up_type : undefined,
-      needs_follow_up: typeof (input as AgentModelResult).needs_follow_up === 'boolean' ? (input as AgentModelResult).needs_follow_up : undefined
+      intent: 'query_elderly_info'
     }
   }
 
@@ -510,95 +517,82 @@ class AgentService {
     const normalizedIntent = this.ensureQueryIntent(intent)
 
     // 处理来自NLP Agent的意图
-    const intentType = normalizedIntent.intent || normalizedIntent.type
-    if (intentType) {
-      switch (intentType) {
-        case 'query_elderly_info': {
-          const elderlyName = normalizedIntent.entities?.name
-          const elderlyInfo = elderlyName
-            ? await Elderly.findAll({ where: { name: { [Op.like]: `%${elderlyName}%` } } })
-            : await Elderly.findAll({ limit: 10 })
+    const intentType = normalizedIntent.type
+    switch (intentType) {
+      case 'query_elderly_info': {
+        const elderlyName = normalizedIntent.entities?.name
+        const elderlyInfo = elderlyName
+          ? await Elderly.findAll({ where: { name: { [Op.like]: `%${elderlyName}%` } } })
+          : await Elderly.findAll({ limit: 10 })
 
-          return {
-            data: elderlyInfo,
-            summary: `找到 ${elderlyInfo.length} 位老人的信息`
-          }
+        return {
+          data: elderlyInfo,
+          summary: `找到 ${elderlyInfo.length} 位老人的信息`
         }
+      }
 
-        case 'query_health_status': {
-          const recordType = normalizedIntent.entities?.record_type
-          const healthRecords = recordType
-            ? await HealthRecord.findAll({
+      case 'query_health_status': {
+        const recordType = normalizedIntent.entities?.record_type
+        const healthRecords = recordType
+          ? await HealthRecord.findAll({
               where: { recordType },
               include: [{ model: Elderly, as: 'elderly' }],
               limit: 10
             })
-            : await HealthRecord.findAll({
+          : await HealthRecord.findAll({
               include: [{ model: Elderly, as: 'elderly' }],
               order: [['recordDate', 'DESC']],
               limit: 10
             })
 
-          return {
-            data: healthRecords,
-            summary: `找到 ${healthRecords.length} 条健康记录`
-          }
+        return {
+          data: healthRecords,
+          summary: `找到 ${healthRecords.length} 条健康记录`
         }
+      }
 
-        case 'query_service_records': {
-          const serviceRecords = await ServiceRecord.findAll({
-            include: [{ model: Elderly, as: 'elderly' }],
-            order: [['serviceDate', 'DESC']],
-            limit: 10
-          })
-          return {
-            data: serviceRecords,
-            summary: `找到 ${serviceRecords.length} 条服务记录`
-          }
+      case 'query_service_records': {
+        const serviceRecords = await ServiceRecord.findAll({
+          include: [{ model: Elderly, as: 'elderly' }],
+          order: [['serviceDate', 'DESC']],
+          limit: 10
+        })
+        return {
+          data: serviceRecords,
+          summary: `找到 ${serviceRecords.length} 条服务记录`
         }
+      }
 
-        case 'query_warnings': {
-          const riskLevel = normalizedIntent.entities?.risk_level
-          const warnings = riskLevel
-            ? await Warning.findAll({
+      case 'query_warnings': {
+        const riskLevel = normalizedIntent.entities?.risk_level
+        const warnings = riskLevel
+          ? await Warning.findAll({
               where: { riskLevel },
               include: [{ model: Elderly, as: 'elderly' }],
               limit: 10
             })
-            : await Warning.findAll({
+          : await Warning.findAll({
               include: [{ model: Elderly, as: 'elderly' }],
               order: [['createdAt', 'DESC']],
               limit: 10
             })
-          return {
-            data: warnings,
-            summary: `找到 ${warnings.length} 条预警信息`
-          }
-        }
-
-        case 'statistical_analysis': {
-          const stats = await Elderly.findAll({
-            attributes: ['riskLevel', [Elderly.sequelize?.fn('COUNT', Elderly.sequelize?.col('id')), 'count']],
-            group: ['riskLevel']
-          })
-          return {
-            data: stats,
-            summary: '老人风险等级分布统计'
-          }
-        }
-
-        default: {
-          const generalElderly = await Elderly.findAll({ limit: 10 })
-          return {
-            data: generalElderly,
-            summary: '系统中的老人信息'
-          }
+        return {
+          data: warnings,
+          summary: `找到 ${warnings.length} 条预警信息`
         }
       }
-    }
 
-    // 处理本地规则的意图
-    switch (intent.type) {
+      case 'statistical_analysis': {
+        const stats = await Elderly.findAll({
+          attributes: ['riskLevel', [Elderly.sequelize?.fn('COUNT', Elderly.sequelize?.col('id')), 'count']],
+          group: ['riskLevel']
+        })
+        return {
+          data: stats,
+          summary: '老人风险等级分布统计'
+        }
+      }
+
       case 'elderlyCount': {
         const elderlyCount = await Elderly.count()
         return {

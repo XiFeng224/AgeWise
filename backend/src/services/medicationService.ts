@@ -1,5 +1,4 @@
-import { MedicationAdherence, Elderly } from '../models'
-import { Op } from 'sequelize'
+import { MedicationAdherence } from '../models'
 
 class MedicationService {
   // 添加用药记录
@@ -134,7 +133,14 @@ class MedicationService {
         where: { elderlyId }
       })
       
-      const anomalies = []
+      const anomalies: Array<{
+        type: string
+        medicationName: string
+        message: string
+        hoursSinceLast?: number
+        adherenceRate?: number
+        timestamp: Date
+      }> = []
       
       medications.forEach(medication => {
         // 检查是否漏服
@@ -207,7 +213,7 @@ class MedicationService {
   }
 
   // 生成用药建议
-  private generateMedicationRecommendations(overallAdherence: number, anomalies: any[]): string[] {
+  private generateMedicationRecommendations(overallAdherence: number, anomalies: Array<{ type: string; medicationName: string }>): string[] {
     const recommendations: string[] = []
     
     if (overallAdherence < 70) {

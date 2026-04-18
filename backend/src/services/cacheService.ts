@@ -33,7 +33,7 @@ class CacheService {
    * @param value 缓存值
    * @param ttl 过期时间（秒）
    */
-  async set(key: string, value: any, ttl: number = 3600): Promise<void> {
+  async set(key: string, value: unknown, ttl: number = 3600): Promise<void> {
     if (!this.isConnected) {
       console.warn('Redis未连接，跳过缓存设置')
       return
@@ -52,7 +52,7 @@ class CacheService {
    * @param key 缓存键
    * @returns 缓存值
    */
-  async get(key: string): Promise<any> {
+  async get(key: string): Promise<unknown> {
     if (!this.isConnected) {
       console.warn('Redis未连接，跳过缓存获取')
       return null
@@ -112,7 +112,7 @@ class CacheService {
    * @param userId 用户ID
    * @param userInfo 用户信息
    */
-  async cacheUser(userId: number, userInfo: any): Promise<void> {
+  async cacheUser(userId: number, userInfo: { username: string; [key: string]: unknown }): Promise<void> {
     await this.set(`user:${userId}`, userInfo, 3600)
     await this.set(`user:username:${userInfo.username}`, userInfo, 3600)
   }
@@ -122,7 +122,7 @@ class CacheService {
    * @param userId 用户ID
    * @returns 用户信息
    */
-  async getCachedUser(userId: number): Promise<any> {
+  async getCachedUser(userId: number): Promise<unknown> {
     return await this.get(`user:${userId}`)
   }
 
@@ -131,7 +131,7 @@ class CacheService {
    * @param elderlyId 老人ID
    * @param elderlyInfo 老人信息
    */
-  async cacheElderly(elderlyId: number, elderlyInfo: any): Promise<void> {
+  async cacheElderly(elderlyId: number, elderlyInfo: unknown): Promise<void> {
     await this.set(`elderly:${elderlyId}`, elderlyInfo, 1800)
   }
 
@@ -140,7 +140,7 @@ class CacheService {
    * @param elderlyId 老人ID
    * @returns 老人信息
    */
-  async getCachedElderly(elderlyId: number): Promise<any> {
+  async getCachedElderly(elderlyId: number): Promise<unknown> {
     return await this.get(`elderly:${elderlyId}`)
   }
 
@@ -149,7 +149,7 @@ class CacheService {
    * @param key 缓存键
    * @param warnings 预警列表
    */
-  async cacheWarnings(key: string, warnings: any[]): Promise<void> {
+  async cacheWarnings(key: string, warnings: unknown[]): Promise<void> {
     await this.set(`warnings:${key}`, warnings, 600)
   }
 
@@ -158,8 +158,9 @@ class CacheService {
    * @param key 缓存键
    * @returns 预警列表
    */
-  async getCachedWarnings(key: string): Promise<any[]> {
-    return await this.get(`warnings:${key}`) || []
+  async getCachedWarnings(key: string): Promise<unknown[]> {
+    const result = await this.get(`warnings:${key}`)
+    return Array.isArray(result) ? result : []
   }
 
   /**

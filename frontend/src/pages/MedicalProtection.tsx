@@ -35,6 +35,7 @@ interface VideoItem {
   title: string;
   description: string;
   cover: string;
+  videoUrl: string;
   duration: string;
   views: number;
   likes: number;
@@ -49,6 +50,7 @@ const mockVideos: VideoItem[] = [
     title: '中国老年人日常防护指南',
     description: '由中国疾控中心专家讲解，详细介绍老年人在日常生活中的防护措施，包括个人卫生、饮食健康等方面的注意事项，符合国内老年人的生活习惯。',
     cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20health%20protection%20guide%20medical%20video%20cover%20with%20Chinese%20doctor%20and%20elderly%20people&image_size=landscape_16_9',
+    videoUrl: '/medical-videos/elderly-daily-protection.mp4',
     duration: '08:45',
     views: 5250,
     likes: 389,
@@ -61,6 +63,7 @@ const mockVideos: VideoItem[] = [
     title: '老年人常见疾病预防 - 中国专家解读',
     description: '由北京协和医院专家讲解，针对中国老年人常见疾病的预防方法，包括高血压、糖尿病、心脑血管疾病等的预防措施和饮食调理。',
     cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20disease%20prevention%20medical%20video%20cover%20with%20Beijing%20Union%20Hospital%20doctor&image_size=landscape_16_9',
+    videoUrl: '/medical-videos/chronic-disease-prevention.mp4',
     duration: '12:30',
     views: 8100,
     likes: 656,
@@ -73,6 +76,7 @@ const mockVideos: VideoItem[] = [
     title: '老年人急救知识 - 中国红十字会教程',
     description: '中国红十字会官方教程，教授老年人及其家属基本的急救知识，包括心肺复苏、止血、骨折处理等紧急情况的应对方法，符合中国国情。',
     cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20first%20aid%20knowledge%20Red%20Cross%20video%20cover%20with%20Chinese%20first%20aid%20instructor&image_size=landscape_16_9',
+    videoUrl: '/medical-videos/elderly-first-aid.mp4',
     duration: '15:20',
     views: 6850,
     likes: 534,
@@ -85,6 +89,7 @@ const mockVideos: VideoItem[] = [
     title: '老年人用药安全 - 中国药学会指南',
     description: '由中国药学会专家讲解，介绍老年人用药的注意事项，包括常用药物的正确服用方法、药物相互作用、副作用的识别等，针对国内常用药物。',
     cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20medication%20safety%20video%20cover%20with%20Chinese%20pharmacist%20and%20elderly%20patient&image_size=landscape_16_9',
+    videoUrl: '/medical-videos/medication-safety.mp4',
     duration: '10:15',
     views: 7680,
     likes: 412,
@@ -97,6 +102,7 @@ const mockVideos: VideoItem[] = [
     title: '老年人心理健康 - 北京安定医院指南',
     description: '由北京安定医院心理专家讲解，关注老年人的心理健康，讲解如何预防和应对老年抑郁、焦虑等心理问题，符合中国老年人的心理特点。',
     cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20mental%20health%20video%20cover%20with%20Beijing%20Anding%20Hospital%20psychologist&image_size=landscape_16_9',
+    videoUrl: '/medical-videos/mental-health.mp4',
     duration: '14:45',
     views: 5320,
     likes: 398,
@@ -109,6 +115,7 @@ const mockVideos: VideoItem[] = [
     title: '老年人居家安全 - 中国老龄协会建议',
     description: '中国老龄协会发布的老年人居家安全指南，讲解老年人居家环境的安全隐患及防范措施，包括跌倒预防、火灾防范、煤气安全等，适合中国家庭环境。',
     cover: 'https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Chinese%20elderly%20home%20safety%20video%20cover%20with%20Chinese%20senior%20citizens%20in%20home%20setting&image_size=landscape_16_9',
+    videoUrl: '/medical-videos/home-safety.mp4',
     duration: '09:30',
     views: 6450,
     likes: 405,
@@ -191,10 +198,10 @@ const MedicalProtection = () => {
     <Content className="medical-protection-content">
       <div className="medical-protection-header">
         <Title level={2} className="medical-protection-title">
-          医疗防护视频
+          社区养老 Agent 知识中心
         </Title>
         <Text className="medical-protection-description">
-          提供专业的老年人医疗防护知识和技能培训视频
+          为社区养老 Agent 提供医疗防护、健康教育与应急处置视频资料
         </Text>
       </div>
 
@@ -220,7 +227,7 @@ const MedicalProtection = () => {
                   className="medical-video-player"
                   controls
                   poster={activeVideo.cover}
-                  src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4"
+                  src={activeVideo.videoUrl}
                   autoPlay={false}
                   preload="metadata"
                   onPlay={() => setPlaying(true)}

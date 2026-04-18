@@ -22,7 +22,7 @@ class ActivityTrackService {
       }
 
       // 分析活动是否异常
-      const analysisResult = this.analyzeActivity(data, elderly)
+      const analysisResult = this.analyzeActivity(data)
 
       // 保存行为轨迹数据
       const activityTrack = await ActivityTrack.create({
@@ -61,8 +61,7 @@ class ActivityTrackService {
       activityType: 'movement' | 'rest' | 'bathroom' | 'kitchen' | 'bedroom'
       duration: number
       startTime: Date
-    },
-    elderly: Elderly
+    }
   ) {
     let isAbnormal = false
     let message = ''
@@ -82,7 +81,7 @@ class ActivityTrackService {
           message = `长时间在卫生间: ${Math.round(data.duration / 60)} 分钟`
         }
         break
-      case 'kitchen':
+      case 'kitchen': {
         // 深夜在厨房活动视为异常
         const hour = data.startTime.getHours()
         if (hour < 6 || hour > 22) {
@@ -90,6 +89,7 @@ class ActivityTrackService {
           message = '深夜在厨房活动'
         }
         break
+      }
       case 'movement':
         // 很少活动（持续时间短）视为异常
         if (data.duration < 10 * 60) {
@@ -164,7 +164,7 @@ class ActivityTrackService {
   }
 
   // 识别活动模式
-  private identifyActivityPattern(stats: Record<string, any>): string {
+  private identifyActivityPattern(stats: Record<string, { count: number; totalDuration: number; averageDuration: number }>): string {
     // 分析活动模式
     const restCount = stats['rest']?.count || 0
     const movementCount = stats['movement']?.count || 0

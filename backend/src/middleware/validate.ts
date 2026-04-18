@@ -54,23 +54,46 @@ function checkValue(field: string, value: any, rule: Rule): string | null {
   return null
 }
 
+function validateSource(source: Record<string, any>, schema: Schema, req: Request, res: Response, next: NextFunction) {
+  const errors: string[] = []
+
+  for (const [field, rule] of Object.entries(schema)) {
+    const err = checkValue(field, source[field], rule)
+    if (err) errors.push(err)
+  }
+
+  if (errors.length > 0) {
+    return sendError(res, '参数校验失败', 400, {
+      traceId: req.traceId,
+      errors
+    })
+  }
+
+  next()
+}
+
 export function validateBody(schema: Schema) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const body = req.body || {}
-    const errors: string[] = []
+    return validateSource(req.body || {}, schema, req, res, next)
+  }
+}
 
-    for (const [field, rule] of Object.entries(schema)) {
-      const err = checkValue(field, body[field], rule)
-      if (err) errors.push(err)
+export function validateQuery(schema: Schema) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    return validateSource(req.query as Record<string, any>, schema, req, res, next)
+  }
+}
+
+export function validateParams(schema: Schema) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const source: Record<string, any> = {}
+    for (const [key, rule] of Object.entries(schema)) {
+      let value: any = req.params[key]
+      if (rule.type === 'number' && value !== undefined) {
+        value = Number(value)
+      }
+      source[key] = value
     }
-
-    if (errors.length > 0) {
-      return sendError(res, '参数校验失败', 400, {
-        traceId: req.traceId,
-        errors
-      })
-    }
-
-    next()
+    return validateSource(source, schema, req, res, next)
   }
 }

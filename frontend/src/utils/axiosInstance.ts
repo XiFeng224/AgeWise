@@ -1,5 +1,16 @@
-import axios from 'axios'
-import { message } from 'antd'
+import axios, { AxiosRequestConfig } from 'axios'
+
+const emitGlobalError = (text: string) => {
+  try {
+    window.dispatchEvent(new CustomEvent('app:error', { detail: text }))
+  } catch {
+    // ignore in non-browser contexts
+  }
+}
+
+type ExtendedAxiosRequestConfig = AxiosRequestConfig & {
+  suppressGlobalError?: boolean
+}
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || '/api'
 
@@ -55,7 +66,11 @@ axiosInstance.interceptors.response.use(
     return response
   },
   async (error) => {
-    const originalRequest = error.config
+    if (error?.code === 'ERR_CANCELED' || error?.message === 'canceled') {
+      return Promise.reject(error)
+    }
+
+    const originalRequest = error.config as ExtendedAxiosRequestConfig
 
     if (error.response?.status === 401 && !originalRequest?._retry) {
       originalRequest._retry = true
@@ -69,15 +84,23 @@ axiosInstance.interceptors.response.use(
         localStorage.removeItem('refreshToken')
         localStorage.removeItem('user')
 
-        message.error('登录已过期，请重新登录')
+        emitGlobalError('登录已过期，请重新登录')
         window.location.href = '/login'
         return Promise.reject(refreshError)
       }
     }
 
     const backendError = error.response?.data?.error
-    if (!error?.config?.suppressGlobalError) {
-      message.error(backendError || '网络请求失败，请稍后重试')
+    const cfg = (error?.config || {}) as ExtendedAxiosRequestConfig
+
+    if (!cfg.suppressGlobalError) {
+      if (error?.code === 'ECONNABORTED' || /timeout/i.test(String(error?.message || ''))) {
+        emitGlobalError('请求超时，请检查网络或稍后重试')
+      } else if (!error?.response) {
+        emitGlobalError('网络连接失败：请检查后端服务是否可达')
+      } else {
+        emitGlobalError(backendError || '网络请求失败，请稍后重试')
+      }
     }
 
     return Promise.reject(error)

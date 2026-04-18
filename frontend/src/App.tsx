@@ -21,6 +21,7 @@ const AgentVNext = lazy(() => import('./pages/AgentVNext'))
 const SystemStatus = lazy(() => import('./pages/SystemStatus'))
 const Help = lazy(() => import('./pages/Help'))
 const MedicalProtection = lazy(() => import('./pages/MedicalProtection'))
+const RiskAnalysis = lazy(() => import('./pages/RiskAnalysis'))
 
 const preloadDashboard = () => import('./pages/Dashboard')
 const preloadRiskWarning = () => import('./pages/RiskWarning')
@@ -251,6 +252,16 @@ const App: React.FC = () => {
               <ProtectedRoute>
                 <Layout>
                   <LazyComponent component={<MedicalProtection />} />
+                </Layout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/risk-analysis" 
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <LazyComponent component={<RiskAnalysis />} />
                 </Layout>
               </ProtectedRoute>
             } 

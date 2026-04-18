@@ -1,6 +1,5 @@
 import { HealthData, Elderly } from '../models'
 import { Op } from 'sequelize'
-import { calculateHealthRisk } from '../utils/healthAnalysis'
 import warningManagementService from './warningManagementService'
 
 // 健康数据服务类
@@ -21,7 +20,7 @@ class HealthDataService {
       }
 
       // 分析数据是否异常
-      const analysisResult = this.analyzeHealthData(data, elderly)
+      const analysisResult = this.analyzeHealthData(data)
 
       // 保存健康数据
       const healthData = await HealthData.create({
@@ -63,8 +62,7 @@ class HealthDataService {
       dataType: 'heart_rate' | 'blood_pressure' | 'blood_sugar' | 'temperature' | 'steps' | 'sleep'
       value: number
       value2?: number
-    },
-    elderly: Elderly
+    }
   ) {
     let isAbnormal = false
     let message = ''
@@ -135,7 +133,7 @@ class HealthDataService {
     const startTime = new Date()
     startTime.setDate(startTime.getDate() - days)
 
-    const whereCondition: any = {
+    const whereCondition: Record<string, unknown> = {
       elderlyId,
       createdAt: {
         [Op.gte]: startTime

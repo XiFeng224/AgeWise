@@ -1,4 +1,4 @@
-import { CognitiveTest, Elderly } from '../models'
+import { CognitiveTest } from '../models'
 import { Op } from 'sequelize'
 
 class CognitiveService {
@@ -28,7 +28,7 @@ class CognitiveService {
       const startDate = new Date()
       startDate.setDate(startDate.getDate() - days)
       
-      const whereClause: any = {
+      const whereClause: Record<string, unknown> = {
         elderlyId,
         testDate: { [Op.gte]: startDate }
       }
@@ -97,7 +97,13 @@ class CognitiveService {
       const overallCognitiveLevel = this.assessCognitiveLevel(trendsByType)
       
       // 生成建议
-      const recommendations = this.generateCognitiveRecommendations(trendsByType, overallCognitiveLevel)
+      const recommendations = this.generateCognitiveRecommendations(
+        trendsByType.map(item => ({
+          testType: item.testType as 'memory' | 'attention' | 'language' | 'executive',
+          trend: item.trend
+        })),
+        overallCognitiveLevel
+      )
       
       return {
         success: true,
@@ -141,7 +147,7 @@ class CognitiveService {
   }
 
   // 评估认知水平
-  private assessCognitiveLevel(trends: any[]): 'excellent' | 'good' | 'fair' | 'poor' {
+  private assessCognitiveLevel(trends: Array<{ avgScore: number }>): 'excellent' | 'good' | 'fair' | 'poor' {
     const avgScores = trends.map(trend => trend.avgScore)
     const overallAvg = avgScores.reduce((sum, score) => sum + score, 0) / avgScores.length
     
@@ -157,7 +163,7 @@ class CognitiveService {
   }
 
   // 生成认知建议
-  private generateCognitiveRecommendations(trends: any[], cognitiveLevel: 'excellent' | 'good' | 'fair' | 'poor'): string[] {
+  private generateCognitiveRecommendations(trends: Array<{ trend: 'improving' | 'declining' | 'stable'; testType: 'memory' | 'attention' | 'language' | 'executive' }>, cognitiveLevel: 'excellent' | 'good' | 'fair' | 'poor'): string[] {
     const recommendations: string[] = []
     
     // 根据认知水平生成建议
@@ -223,10 +229,10 @@ class CognitiveService {
   async generateGamifiedTest(elderlyId: number, testType: 'memory' | 'attention' | 'language' | 'executive') {
     try {
       // 根据测试类型生成不同的游戏化任务
-      let task: any = {}
+      let task: Record<string, unknown> = {}
       
       switch (testType) {
-        case 'memory':
+        case 'memory': {
           // 数字记忆任务
           const numbers = Array.from({ length: 5 }, () => Math.floor(Math.random() * 10))
           task = {
@@ -238,8 +244,9 @@ class CognitiveService {
             timeLimit: 30 // 秒
           }
           break
+        }
         
-        case 'attention':
+        case 'attention': {
           // 找不同任务
           task = {
             type: 'attention',
@@ -250,8 +257,9 @@ class CognitiveService {
             timeLimit: 60 // 秒
           }
           break
+        }
         
-        case 'language':
+        case 'language': {
           // 词语联想任务
           const words = ['苹果', '香蕉', '橙子', '葡萄']
           task = {
@@ -263,8 +271,9 @@ class CognitiveService {
             timeLimit: 45 // 秒
           }
           break
+        }
         
-        case 'executive':
+        case 'executive': {
           // 逻辑推理任务
           task = {
             type: 'executive',
@@ -275,6 +284,7 @@ class CognitiveService {
             timeLimit: 20 // 秒
           }
           break
+        }
       }
       
       return { success: true, data: task }

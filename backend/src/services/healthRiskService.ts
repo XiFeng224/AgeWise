@@ -85,11 +85,11 @@ class HealthRiskService {
 
   // 分析跌倒风险因素
   private analyzeFallRiskFactors(
-    healthData: any[],
-    activityData: any[],
+    healthData: Array<{ dataType: string; value: number }>,
+    activityData: Array<{ activityType: string; duration: number; isAbnormal?: boolean }>,
     elderly: Elderly,
-    emotionData?: any[],
-    cognitiveData?: any[]
+    emotionData?: Array<{ emotionType: string }>,
+    cognitiveData?: Array<{ score: number; maxScore: number }>
   ): string[] {
     const factors: string[] = []
 
@@ -195,14 +195,30 @@ class HealthRiskService {
     // 因素分数
     factors.forEach(factor => {
       switch (factor) {
-        case '心率异常': score += 15
-        case '血压偏高': score += 15
-        case '活动量过少': score += 15
-        case '长时间休息': score += 10
-        case '频繁上厕所': score += 10
-        case '存在异常活动模式': score += 20
-        case '情绪状态较差': score += 15
-        case '认知功能下降': score += 20
+        case '心率异常':
+          score += 15
+          break
+        case '血压偏高':
+          score += 15
+          break
+        case '活动量过少':
+          score += 15
+          break
+        case '长时间休息':
+          score += 10
+          break
+        case '频繁上厕所':
+          score += 10
+          break
+        case '存在异常活动模式':
+          score += 20
+          break
+        case '情绪状态较差':
+          score += 15
+          break
+        case '认知功能下降':
+          score += 20
+          break
       }
     })
 
@@ -306,7 +322,7 @@ class HealthRiskService {
   }
 
   // 分析中风风险因素
-  private analyzeStrokeRiskFactors(healthData: any[], elderly: Elderly): string[] {
+  private analyzeStrokeRiskFactors(healthData: Array<{ dataType: string; value: number; value2?: number }>, elderly: Elderly): string[] {
     const factors: string[] = []
 
     // 年龄因素
@@ -370,9 +386,15 @@ class HealthRiskService {
     // 因素分数
     factors.forEach(factor => {
       switch (factor) {
-        case '高血压': score += 30
-        case '血糖偏高': score += 20
-        case '心率异常': score += 15
+        case '高血压':
+          score += 30
+          break
+        case '血糖偏高':
+          score += 20
+          break
+        case '心率异常':
+          score += 15
+          break
       }
     })
 

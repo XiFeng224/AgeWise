@@ -7,7 +7,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const proxyTarget = env.VITE_PROXY_TARGET || 'http://localhost:8002'
+  const proxyTarget = env.VITE_PROXY_TARGET || 'http://localhost:8003'
 
   return {
     plugins: [react()],
@@ -32,7 +32,17 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': {
           target: proxyTarget,
-          changeOrigin: true
+          changeOrigin: true,
+          ws: false,
+          secure: false,
+          timeout: 0,
+          proxyTimeout: 0,
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq) => {
+              proxyReq.setHeader('Connection', 'keep-alive')
+              proxyReq.setHeader('Cache-Control', 'no-cache')
+            })
+          }
         }
       }
     }

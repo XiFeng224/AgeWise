@@ -197,12 +197,21 @@ router.post('/reset-demo-users', authorize(['admin']), async (req, res) => {
 // AI效果评估指标（管理员可见）
 router.get('/ai-metrics', authorize(['admin', 'manager']), async (req, res) => {
   try {
-    const metrics = aiMetricsService.getMetrics()
+    const metrics = aiMetricsService?.getMetrics?.() || {
+      totalQueries: 0,
+      answeredQueries: 0,
+      highRiskDetected: 0,
+      accuracy: 0,
+      fallbackRate: 0,
+      avgConfidence: 0,
+      recentCalls: []
+    }
     res.json({
       success: true,
       data: metrics
     })
   } catch (error) {
+    console.error('获取AI指标失败:', error)
     res.status(500).json({
       success: false,
       error: '获取AI指标失败'

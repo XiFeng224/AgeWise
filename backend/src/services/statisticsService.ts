@@ -51,7 +51,7 @@ class StatisticsService {
         '较差': 0
       }
 
-      elderlyList.forEach((elderly: any) => {
+      elderlyList.forEach((elderly) => {
         const s = elderly.healthStatus
         if (s === 'excellent') healthStatus['优秀']++
         else if (s === 'good') healthStatus['良好']++
@@ -74,7 +74,7 @@ class StatisticsService {
       const riskStats = await Warning.findAll({
         attributes: ['riskLevel', [fn('COUNT', col('id')), 'count']],
         group: ['riskLevel']
-      })
+      }) as Array<Warning & { count: string }>
       
       const riskMap = {
         'low': '低风险',
@@ -84,7 +84,7 @@ class StatisticsService {
       
       const result = riskStats.map(stat => ({
         name: riskMap[stat.riskLevel] || stat.riskLevel,
-        value: parseInt((stat as any).dataValues.count as string),
+        value: parseInt(String(stat.count), 10),
         itemStyle: {
           color: stat.riskLevel === 'low' ? '#52c41a' : 
                  stat.riskLevel === 'medium' ? '#faad14' : '#f5222d'
@@ -125,7 +125,7 @@ class StatisticsService {
       ])
 
       // 按月分组
-      const monthlyData: any = {}
+      const monthlyData: Record<string, { '上门服务': number; '健康检查': number; '紧急处理': number }> = {}
       for (let i = 0; i < months; i++) {
         const month = new Date(now.getFullYear(), now.getMonth() - i, 1)
         const monthKey = `${month.getMonth() + 1}月`
@@ -152,8 +152,8 @@ class StatisticsService {
       })
 
       // 合并服务请求到趋势：有请求也会形成曲线，避免全空
-      serviceRequests.forEach((req: any) => {
-        const month = new Date(req.createdAt)
+      serviceRequests.forEach((req: ServiceRequest) => {
+        const month = new Date(req.created_at)
         const monthKey = `${month.getMonth() + 1}月`
         if (monthlyData[monthKey]) {
           if ((req.requestType || '').includes('紧急') || req.priority === 'high') {
@@ -208,9 +208,9 @@ class StatisticsService {
       })
       
       // 计算每天的预警数量
-      const dailyWarnings: any = {}
+      const dailyWarnings: Record<string, number> = {}
       historicalData.forEach(warning => {
-        const date = new Date((warning as any).created_at || (warning as any).createdAt)
+        const date = new Date((warning as { created_at?: Date; createdAt?: Date }).created_at || (warning as { created_at?: Date; createdAt?: Date }).createdAt)
         const dateKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`
         if (!dailyWarnings[dateKey]) {
           dailyWarnings[dateKey] = 0
@@ -220,8 +220,8 @@ class StatisticsService {
       
       // 生成未来预测数据
       const today = new Date()
-      const futureDates = []
-      const futureData = []
+      const futureDates: string[] = []
+      const futureData: number[] = []
       
       // 计算历史平均值
       const historicalValues = Object.values(dailyWarnings) as number[]
@@ -274,8 +274,8 @@ class StatisticsService {
       
       // 生成未来预测数据
       const today = new Date()
-      const futureDates = []
-      const futureData = []
+      const futureDates: string[] = []
+      const futureData: Array<{ bloodPressure: string; bloodSugar: number; heartRate: number; temperature: number }> = []
       
       for (let i = 1; i <= days; i++) {
         const futureDate = new Date(today)

@@ -15,13 +15,23 @@ interface TokenPayload {
   role: string
 }
 
+interface TokenUser {
+  id: number
+  username: string
+  role: string
+}
+
+interface JwtDecodedPayload {
+  exp?: number
+}
+
 class TokenService {
   /**
    * 生成访问令牌
    * @param user 用户信息
    * @returns 访问令牌
    */
-  generateAccessToken(user: any): string {
+  generateAccessToken(user: TokenUser): string {
     const payload: TokenPayload = {
       userId: user.id,
       username: user.username,
@@ -36,7 +46,7 @@ class TokenService {
    * @param user 用户信息
    * @returns 刷新令牌
    */
-  generateRefreshToken(user: any): string {
+  generateRefreshToken(user: TokenUser): string {
     const payload: TokenPayload = {
       userId: user.id,
       username: user.username,
@@ -77,17 +87,22 @@ class TokenService {
    * @param token 令牌
    * @param expiresIn 过期时间（秒）
    */
-  async blacklistToken(token: string, _expiresIn: number): Promise<void> {
+  async blacklistToken(token: string, expiresIn?: number): Promise<void> {
     try {
-      // 计算令牌的过期时间
-      const decoded = jwt.decode(token) as any
-      if (decoded && decoded.exp) {
-        const currentTime = Math.floor(Date.now() / 1000)
-        const tokenExpiry = decoded.exp
-        const ttl = tokenExpiry - currentTime
+      if (expiresIn) {
+        // 使用指定的过期时间
+        await cacheService.set(`blacklist:${token}`, true, expiresIn)
+      } else {
+        // 计算令牌的过期时间
+        const decoded = jwt.decode(token) as JwtDecodedPayload | null
+        if (decoded && decoded.exp) {
+          const currentTime = Math.floor(Date.now() / 1000)
+          const tokenExpiry = decoded.exp
+          const ttl = tokenExpiry - currentTime
 
-        if (ttl > 0) {
-          await cacheService.set(`blacklist:${token}`, true, ttl)
+          if (ttl > 0) {
+            await cacheService.set(`blacklist:${token}`, true, ttl)
+          }
         }
       }
     } catch (error) {
@@ -152,7 +167,7 @@ class TokenService {
   async revokeToken(token: string): Promise<void> {
     try {
       // 计算令牌的过期时间
-      const decoded = jwt.decode(token) as any
+      const decoded = jwt.decode(token) as JwtDecodedPayload | null
       if (decoded && decoded.exp) {
         const currentTime = Math.floor(Date.now() / 1000)
         const tokenExpiry = decoded.exp

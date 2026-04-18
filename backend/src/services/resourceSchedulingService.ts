@@ -1,5 +1,4 @@
 import { ServiceProvider, ServiceRequest, Elderly, User } from '../models'
-import { Op } from 'sequelize'
 
 class ResourceSchedulingService {
   // 创建服务请求
@@ -36,7 +35,7 @@ class ResourceSchedulingService {
   // 获取服务请求列表
   async getServiceRequests(status?: 'pending' | 'assigned' | 'completed' | 'cancelled', elderlyId?: number) {
     try {
-      const whereClause: any = {}
+      const whereClause: Record<string, unknown> = {}
 
       if (status) {
         whereClause.status = status
@@ -302,7 +301,7 @@ class ResourceSchedulingService {
   // 获取服务人员列表
   async getServiceProviders(type?: 'nurse' | 'volunteer' | 'doctor', availability?: boolean) {
     try {
-      const whereClause: any = {}
+      const whereClause: Record<string, unknown> = {}
 
       if (type) {
         whereClause.type = type

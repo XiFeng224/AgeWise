@@ -12,7 +12,8 @@ let demoCursor = 0
 
 router.post('/triage', authenticate, async (req, res) => {
   try {
-    const data = await aiAgentService.triage(req.body)
+    const { modelPreference = 'auto', ...input } = req.body || {}
+    const data = await aiAgentService.triage(input, modelPreference)
     return sendSuccess(res, data)
   } catch (error) {
     return sendError(res, (error as Error).message || 'AI分诊失败', 500)
@@ -21,7 +22,8 @@ router.post('/triage', authenticate, async (req, res) => {
 
 router.post('/dispatch', authenticate, async (req, res) => {
   try {
-    const data = await aiAgentService.dispatch(req.body)
+    const { modelPreference = 'auto', ...input } = req.body || {}
+    const data = await aiAgentService.dispatch(input, modelPreference)
     return sendSuccess(res, data)
   } catch (error) {
     return sendError(res, (error as Error).message || 'AI派单失败', 500)
@@ -30,8 +32,8 @@ router.post('/dispatch', authenticate, async (req, res) => {
 
 router.post('/copilot', authenticate, async (req, res) => {
   try {
-    const { question, context } = req.body
-    const data = await aiAgentService.copilot(question, context)
+    const { question, context, modelPreference = 'auto' } = req.body || {}
+    const data = await aiAgentService.copilot(question, context, modelPreference)
     return sendSuccess(res, data)
   } catch (error) {
     return sendError(res, (error as Error).message || 'AI副驾失败', 500)

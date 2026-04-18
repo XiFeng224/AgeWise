@@ -91,6 +91,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           icon: <RobotOutlined />,
           label: '运行台',
         },
+        {
+          key: '/risk-analysis',
+          icon: <WarningOutlined />,
+          label: '风险分析 Agent',
+        },
       ],
     },
     {
@@ -101,7 +106,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {
           key: '/risk',
           icon: <WarningOutlined />,
-          label: '风险预警',
+          label: '主动预警 Agent',
         },
         {
           key: '/elderly',
@@ -116,7 +121,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {
           key: '/statistics',
           icon: <BarChartOutlined />,
-          label: '数据分析',
+          label: '数据分析底座',
         },
         {
           key: '/query',
@@ -131,7 +136,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {
           key: '/medical-protection',
           icon: <VideoCameraOutlined />,
-          label: '医疗防护视频',
+          label: '知识中心',
         },
       ],
     },
@@ -214,7 +219,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             />
             <div className="layout-title-group">
               <Text strong className="layout-title">银龄智护 Agent 平台</Text>
-              <Text type="secondary" className="layout-subtitle">Agent 闭环编排 · 问答 · 执行 · 追踪</Text>
+              <Text type="secondary" className="layout-subtitle">感知 · 分析 · 决策 · 执行 · 追踪</Text>
             </div>
           </div>
           <div className="layout-header-right">

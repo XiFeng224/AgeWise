@@ -2,6 +2,48 @@ import { Warning, Elderly, User } from '../models'
 import { notificationService } from './notificationService'
 import healthRiskService from './healthRiskService'
 
+interface AnalysisResult {
+  isAbnormal: boolean
+  title: string
+  description: string
+  severity: number
+}
+
+interface HealthDataInput {
+  dataType: 'heart_rate' | 'blood_pressure' | 'blood_sugar' | 'temperature' | 'steps' | 'sleep'
+  value: number
+  value2?: number
+}
+
+interface ActivityDataInput {
+  activityType: 'no_activity' | 'frequent_bathroom' | 'fall_risk'
+  duration?: number
+  count?: number
+}
+
+interface WarningTriggerData {
+  warningType: string
+  level: 'green' | 'yellow' | 'red'
+  title: string
+  description: string
+  triggerData: object
+}
+
+type ActivityWarningTriggerData = ActivityDataInput | { type: 'no_activity' | 'frequent_bathroom' | 'night_activity'; message: string; duration?: number; count?: number; timestamp?: Date }
+type HealthWarningTriggerData = HealthDataInput & { message?: string }
+
+type SensorKind = 'door_contact' | 'water_meter' | 'mattress' | 'activity' | 'service_gap'
+
+interface ProactiveSensorInput {
+  elderlyId: number
+  sensorType: SensorKind
+  value?: number
+  value2?: number
+  textValue?: string
+  observedAt?: Date
+  meta?: Record<string, unknown>
+}
+
 // 预警管理服务类
 class WarningManagementService {
   // 预警等级定义（与模型 riskLevel: low/medium/high 保持一致）
@@ -24,7 +66,7 @@ class WarningManagementService {
   }
 
   // 分析健康数据并生成预警
-  async analyzeHealthDataAndGenerateWarning(elderlyId: number, healthData: any) {
+  async analyzeHealthDataAndGenerateWarning(elderlyId: number, healthData: HealthWarningTriggerData) {
     try {
       // 分析健康数据
       const analysisResult = this.analyzeHealthData(healthData)
@@ -32,13 +74,14 @@ class WarningManagementService {
       // 如果有异常，生成预警
       if (analysisResult.isAbnormal) {
         const warningLevel = this.determineWarningLevel(analysisResult)
-        await this.generateWarning(elderlyId, {
+        const warning = await this.generateWarning(elderlyId, {
           warningType: 'health_abnormal',
           level: warningLevel,
           title: analysisResult.title,
           description: analysisResult.description,
           triggerData: healthData
         })
+        await this.createProactiveTaskFromWarning(warning, '健康指标异常，建议尽快复测并安排随访')
       }
     } catch (error) {
       console.error('分析健康数据并生成预警失败:', error)
@@ -46,7 +89,7 @@ class WarningManagementService {
   }
 
   // 分析行为数据并生成预警
-  async analyzeActivityDataAndGenerateWarning(elderlyId: number, activityData: any) {
+  async analyzeActivityDataAndGenerateWarning(elderlyId: number, activityData: ActivityDataInput) {
     try {
       // 分析行为数据
       const analysisResult = this.analyzeActivityData(activityData)
@@ -54,16 +97,37 @@ class WarningManagementService {
       // 如果有异常，生成预警
       if (analysisResult.isAbnormal) {
         const warningLevel = this.determineWarningLevel(analysisResult)
-        await this.generateWarning(elderlyId, {
+        const warning = await this.generateWarning(elderlyId, {
           warningType: 'activity_abnormal',
           level: warningLevel,
           title: analysisResult.title,
           description: analysisResult.description,
           triggerData: activityData
         })
+        await this.createProactiveTaskFromWarning(warning, '活动模式异常，建议网格员电话关怀')
       }
     } catch (error) {
       console.error('分析行为数据并生成预警失败:', error)
+    }
+  }
+
+  private async createProactiveTaskFromWarning(warning: Warning, suggestion: string) {
+    try {
+      await notificationService.sendNotification(
+        warning.elderlyId,
+        `Agent主动感知任务-${warning.title}`,
+        JSON.stringify({
+          warningId: warning.id,
+          warningType: warning.warningType,
+          riskLevel: warning.riskLevel,
+          suggestion,
+          createdAt: new Date().toISOString()
+        }),
+        'warning',
+        warning.id
+      )
+    } catch (error) {
+      console.error('创建主动感知任务失败:', error)
     }
   }
 
@@ -129,7 +193,7 @@ class WarningManagementService {
   }
 
   // 分析健康数据
-  private analyzeHealthData(data: any) {
+  private analyzeHealthData(data: HealthDataInput): AnalysisResult {
     const result = {
       isAbnormal: false,
       title: '',
@@ -182,8 +246,131 @@ class WarningManagementService {
     return result
   }
 
+  private analyzeDoorContact(data: ProactiveSensorInput): AnalysisResult {
+    const hours = Number(data.value || 0)
+    if (hours >= 12) {
+      return {
+        isAbnormal: true,
+        title: '门磁异常：长时间未开门',
+        description: `老人${hours.toFixed(1)}小时未开门，建议立即电话确认`,
+        severity: hours >= 24 ? 3 : 2
+      }
+    }
+    return { isAbnormal: false, title: '', description: '', severity: 0 }
+  }
+
+  private analyzeWaterMeter(data: ProactiveSensorInput): AnalysisResult {
+    const liters = Number(data.value || 0)
+    const hours = Number(data.value2 || 24)
+    if (liters <= 0 && hours >= 12) {
+      return {
+        isAbnormal: true,
+        title: '水表异常：长时间无用水',
+        description: `连续${hours}小时用水量为0，需确认老人状态`,
+        severity: hours >= 24 ? 3 : 2
+      }
+    }
+    return { isAbnormal: false, title: '', description: '', severity: 0 }
+  }
+
+  private analyzeMattress(data: ProactiveSensorInput): AnalysisResult {
+    const heartRate = Number(data.value || 0)
+    const restlessCount = Number(data.value2 || 0)
+    if ((heartRate && (heartRate < 50 || heartRate > 110)) || restlessCount >= 8) {
+      return {
+        isAbnormal: true,
+        title: '床垫异常：夜间生命体征或翻身异常',
+        description: `夜间心率${heartRate || '未知'}，翻身/离床异常次数${restlessCount}`,
+        severity: heartRate > 120 || heartRate < 45 || restlessCount >= 12 ? 3 : 2
+      }
+    }
+    return { isAbnormal: false, title: '', description: '', severity: 0 }
+  }
+
+  private analyzeServiceGap(data: ProactiveSensorInput): AnalysisResult {
+    const days = Number(data.value || 0)
+    if (days >= 3) {
+      return {
+        isAbnormal: true,
+        title: '服务空窗预警',
+        description: `连续${days}天无服务记录，建议主动关怀`,
+        severity: days >= 5 ? 2 : 1
+      }
+    }
+    return { isAbnormal: false, title: '', description: '', severity: 0 }
+  }
+
+  private analyzeProactiveSensor(data: ProactiveSensorInput): AnalysisResult {
+    switch (data.sensorType) {
+      case 'door_contact':
+        return this.analyzeDoorContact(data)
+      case 'water_meter':
+        return this.analyzeWaterMeter(data)
+      case 'mattress':
+        return this.analyzeMattress(data)
+      case 'service_gap':
+        return this.analyzeServiceGap(data)
+      case 'activity':
+        return this.analyzeActivityData({
+          activityType: 'no_activity',
+          duration: Number(data.value || 0),
+          count: Number(data.value2 || 0)
+        })
+      default:
+        return { isAbnormal: false, title: '', description: '', severity: 0 }
+    }
+  }
+
+  // 处理主动感知设备数据（门磁/水表/床垫/无活动/服务空窗）
+  async analyzeProactiveSensorAndGenerateWarning(input: ProactiveSensorInput) {
+    try {
+      const elderly = await Elderly.findByPk(input.elderlyId)
+      if (!elderly) throw new Error('老人不存在')
+
+      const analysisResult = this.analyzeProactiveSensor(input)
+      if (!analysisResult.isAbnormal) return null
+
+      const warningLevel = this.determineWarningLevel(analysisResult)
+      const warningTypeMap: Record<SensorKind, string> = {
+        door_contact: 'door_contact',
+        water_meter: 'water_meter',
+        mattress: 'mattress_risk',
+        activity: 'activity_abnormal',
+        service_gap: 'service_gap'
+      }
+
+      const warning = await this.generateWarning(elderly.id, {
+        warningType: warningTypeMap[input.sensorType],
+        level: warningLevel,
+        title: analysisResult.title,
+        description: analysisResult.description,
+        triggerData: {
+          ...input,
+          analysis: analysisResult
+        }
+      })
+
+      const taskHint =
+        input.sensorType === 'door_contact'
+          ? '门磁异常，建议电话确认并安排上门核查'
+          : input.sensorType === 'water_meter'
+            ? '用水异常，建议确认是否外出/住院/设备故障'
+            : input.sensorType === 'mattress'
+              ? '床垫生命体征异常，建议优先上门或呼叫值班医生'
+              : input.sensorType === 'service_gap'
+                ? '连续无服务记录，建议网格员电话关怀'
+                : '活动异常，建议尽快复核'
+
+      await this.createProactiveTaskFromWarning(warning, taskHint)
+      return warning
+    } catch (error) {
+      console.error('主动感知预警失败:', error)
+      throw error
+    }
+  }
+
   // 分析行为数据
-  private analyzeActivityData(data: any) {
+  private analyzeActivityData(data: ActivityDataInput): AnalysisResult {
     const result = {
       isAbnormal: false,
       title: '',
@@ -223,7 +410,7 @@ class WarningManagementService {
   }
 
   // 确定预警等级
-  private determineWarningLevel(analysisResult: any) {
+  private determineWarningLevel(analysisResult: AnalysisResult): 'green' | 'yellow' | 'red' {
     if (analysisResult.severity === 3) {
       return 'red'
     } else if (analysisResult.severity === 2) {
@@ -234,13 +421,7 @@ class WarningManagementService {
   }
 
   // 生成预警
-  async generateWarning(elderlyId: number, warningData: {
-    warningType: string
-    level: 'green' | 'yellow' | 'red'
-    title: string
-    description: string
-    triggerData: any
-  }) {
+  async generateWarning(elderlyId: number, warningData: WarningTriggerData) {
     try {
       // 检查老人是否存在
       const elderly = await Elderly.findByPk(elderlyId)
@@ -288,7 +469,7 @@ class WarningManagementService {
 
       // 获取相关人员信息
       const gridMember = elderly.gridMemberId ? await User.findByPk(elderly.gridMemberId) : null
-      const familyMembers = [] // 实际应该从数据库中获取
+      const familyMembers: User[] = [] // 实际应该从数据库中获取
 
       // 构建通知内容
       const notificationContent = {
@@ -311,7 +492,7 @@ class WarningManagementService {
       }
 
       // 发送通知给家属
-      await Promise.all(familyMembers.map((familyMember: any) => 
+      await Promise.all(familyMembers.map((familyMember: User) => 
         notificationService.sendNotification(
           familyMember.id,
           warning.title,
@@ -323,7 +504,7 @@ class WarningManagementService {
 
       // 发送通知给管理员
       const admins = await User.findAll({ where: { role: 'admin' } })
-      await Promise.all(admins.map((admin: any) => 
+      await Promise.all(admins.map((admin: User) => 
         notificationService.sendNotification(
           admin.id,
           warning.title,
@@ -462,9 +643,9 @@ class WarningManagementService {
       const resolved = await Warning.count({ where: { status: 'resolved' } })
 
       const byLevel = {
-        red: await Warning.count({ where: { riskLevel: 'red' } }),
-        yellow: await Warning.count({ where: { riskLevel: 'yellow' } }),
-        green: await Warning.count({ where: { riskLevel: 'green' } })
+        high: await Warning.count({ where: { riskLevel: 'high' } }),
+        medium: await Warning.count({ where: { riskLevel: 'medium' } }),
+        low: await Warning.count({ where: { riskLevel: 'low' } })
       }
 
       return {

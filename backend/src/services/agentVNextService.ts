@@ -10,7 +10,7 @@ type ToolName = 'create_dispatch' | 'resolve_warning' | 'notify_family' | 'appen
 
 interface ToolCall {
   tool: ToolName
-  args: Record<string, any>
+  args: Record<string, unknown>
 }
 
 interface PlannerOutput {
@@ -30,7 +30,7 @@ const DEFAULT_POLICY_BY_MODE: PolicyByMode = {
 class AgentVNextService {
   private policyByMode: PolicyByMode = { ...DEFAULT_POLICY_BY_MODE }
   private policyLoaded = false
-  private planCache = new Map<string, { expireAt: number; value: any }>()
+  private planCache = new Map<string, { expireAt: number; value: unknown }>()
 
   private readonly supportedTools: ToolName[] = ['create_dispatch', 'resolve_warning', 'notify_family', 'append_timeline']
 
@@ -107,7 +107,7 @@ class AgentVNextService {
     return item.value
   }
 
-  private setPlanCache(key: string, value: any, ttlMs = 20_000) {
+  private setPlanCache(key: string, value: unknown, ttlMs = 20_000) {
     this.planCache.set(key, {
       value,
       expireAt: Date.now() + ttlMs
@@ -296,6 +296,7 @@ class AgentVNextService {
     sourceQuery?: string
     sourceAnswer?: string
     sourceSuggestedAction?: string[]
+    riskAnalysis?: any
   }) {
     await this.ensurePolicyLoaded()
 
@@ -303,7 +304,7 @@ class AgentVNextService {
     const cached = this.getPlanCache(cacheKey)
     if (cached) {
       return {
-        ...cached,
+        ...(cached as object),
         cache: { hit: true }
       }
     }
@@ -312,7 +313,8 @@ class AgentVNextService {
     const modelPreference = input.modelPreference || 'auto'
     const context = await this.getContextSnapshot(input.elderlyId)
     const references = await this.findReferenceCases(input.elderlyId, input.eventSummary)
-    const risk = this.applyStrategy(strategyMode, input.riskLevel || 'medium') as 'low' | 'medium' | 'high'
+    const riskAnalysis = input.riskAnalysis || null
+    const risk = this.applyStrategy(strategyMode, input.riskLevel || riskAnalysis?.summary?.riskLevel || 'medium') as 'low' | 'medium' | 'high'
     const module = input.module || '医护'
     const duty = agentOrchestratorService.getDutyRoutingSuggestion(module)
     const availableRoles = (context.availableProviders || [])
@@ -347,7 +349,8 @@ class AgentVNextService {
           module,
           sourceQuery: input.sourceQuery || '',
           sourceAnswer: input.sourceAnswer || '',
-          sourceSuggestedAction: input.sourceSuggestedAction || []
+          sourceSuggestedAction: input.sourceSuggestedAction || [],
+          riskAnalysis
         }
       }),
       new Promise((resolve) => setTimeout(() => resolve(null), 1500))
@@ -381,7 +384,8 @@ class AgentVNextService {
         sourceQuery: input.sourceQuery || '',
         sourceAnswer: input.sourceAnswer || '',
         sourceSuggestedAction: input.sourceSuggestedAction || [],
-        modelPreference
+        modelPreference,
+        riskAnalysis
       }
     }).catch((error: any) => ({
       triage: { actions: ['先完成关键体征复测并评估风险等级'] },
@@ -515,10 +519,10 @@ class AgentVNextService {
 
           const data = await agentOrchestratorService.quickDispatchFromElderly({
             elderlyId,
-            requestType: call.args.requestType || 'AI自动派单',
-            priority: call.args.priority || 'medium',
-            description: call.args.description || '由Agent工具调用创建',
-            requiredSkills: call.args.requiredSkills || '护理,随访'
+            requestType: String(call.args.requestType || 'AI自动派单'),
+            priority: (call.args.priority || 'medium') as 'low' | 'medium' | 'high',
+            description: String(call.args.description || '由Agent工具调用创建'),
+            requiredSkills: String(call.args.requiredSkills || '护理,随访')
           })
           results.push({ tool: call.tool, success: true, result: data })
           continue
@@ -544,8 +548,8 @@ class AgentVNextService {
           await Promise.all(
             receivers.map((u: any) => Notification.create({
               userId: u.id,
-              title: call.args.title || `家属沟通提醒-${elderly.name}`,
-              content: call.args.content || '请与家属同步当前处置进度',
+              title: String(call.args.title || `家属沟通提醒-${elderly.name}`),
+              content: String(call.args.content || '请与家属同步当前处置进度'),
               type: 'agent_family_notify',
               relatedId: elderly.id,
               isRead: false
@@ -567,7 +571,7 @@ class AgentVNextService {
             admins.map((u: any) => Notification.create({
               userId: u.id,
               title: `Agent时间线记录-${elderly.name}`,
-              content: call.args.note || 'Agent追加处置记录',
+              content: String(call.args.note || 'Agent追加处置记录'),
               type: 'agent_timeline',
               relatedId: elderly.id,
               isRead: false
@@ -604,7 +608,7 @@ class AgentVNextService {
     const executionTrace: Array<{ step: number; thought: string; action: string; observation: string; success?: boolean }> = []
 
     if (input.autoExecute !== false) {
-      const toolCalls = plan.plan.toolCalls as ToolCall[]
+      const toolCalls = (plan as any).plan?.toolCalls as ToolCall[] || []
       for (let i = 0; i < toolCalls.length; i += 1) {
         const call = toolCalls[i]
         executionTrace.push({
@@ -628,7 +632,7 @@ class AgentVNextService {
       execution,
       executionTrace,
       executed: input.autoExecute !== false,
-      planningAnswer: plan?.decision?.copilot?.summary || plan?.planner?.summary || '已生成任务规划'
+      planningAnswer: (plan as any)?.decision?.copilot?.summary || (plan as any)?.planner?.summary || '已生成任务规划'
     }
   }
 

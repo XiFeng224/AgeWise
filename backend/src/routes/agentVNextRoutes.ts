@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto'
 import { authenticate, authorize } from '../middleware/auth'
 import { sendError, sendSuccess } from '../utils/response'
 import agentVNextService from '../services/agentVNextService'
-import { validateBody } from '../middleware/validate'
+import { validateBody, validateParams } from '../middleware/validate'
 import { tokenService } from '../services/tokenService'
 
 const router = Router()
@@ -27,6 +27,7 @@ interface RuntimeTask {
     sourceQuery?: string
     sourceAnswer?: string
     sourceSuggestedAction?: string[]
+    riskAnalysis?: any
   }
   plan?: any
   autonomous?: any
@@ -116,12 +117,26 @@ function ensurePositiveInt(value: any, field: string) {
   return n
 }
 
+function ensureTaskId(value: any) {
+  const id = String(value || '').trim()
+  if (!id) {
+    throw new Error('taskId不能为空')
+  }
+  return id
+}
+
+function normalizeModelPreference(value: any): 'auto' | 'qwen' | 'deepseek' | 'rule' {
+  if (value === 'auto' || value === 'qwen' || value === 'deepseek' || value === 'rule') return value
+  return 'auto'
+}
+
 router.post('/tasks', authenticate, validateBody({
   elderlyId: { type: 'number', required: true, min: 1 },
   eventSummary: { type: 'string', required: true, min: 1, max: 500, trim: true },
   strategyMode: { type: 'string', required: false, enum: ['conservative', 'balanced', 'aggressive'], trim: true },
   riskLevel: { type: 'string', required: false, enum: ['low', 'medium', 'high'], trim: true },
-  module: { type: 'string', required: false, enum: ['护理', '医护', '后勤', '收费', '接待'], trim: true }
+  module: { type: 'string', required: false, enum: ['护理', '医护', '后勤', '收费', '接待'], trim: true },
+  modelPreference: { type: 'string', required: false, enum: ['auto', 'qwen', 'deepseek', 'rule'], trim: true }
 }), withTimeout(async (req, res) => {
   const body = req.body || {}
 
@@ -138,7 +153,14 @@ router.post('/tasks', authenticate, validateBody({
       strategyMode: normalizeMode(body.strategyMode),
       riskLevel: normalizeRisk(body.riskLevel),
       module: normalizeModule(body.module),
-      autoExecute: body.autoExecute !== false
+      autoExecute: body.autoExecute !== false,
+      modelPreference: normalizeModelPreference(body.modelPreference),
+      sourceQuery: typeof body.sourceQuery === 'string' ? body.sourceQuery : '',
+      sourceAnswer: typeof body.sourceAnswer === 'string' ? body.sourceAnswer : '',
+      sourceSuggestedAction: Array.isArray(body.sourceSuggestedAction)
+        ? body.sourceSuggestedAction.filter((x: any) => typeof x === 'string').slice(0, 20)
+        : [],
+      riskAnalysis: body.riskAnalysis || null
     },
     events: []
   }
@@ -154,7 +176,7 @@ router.post('/tasks', authenticate, validateBody({
     const plan = await agentVNextService.planTask(task.payload)
     task.plan = plan
     runtimeTasks.set(taskId, task)
-    pushRuntimeEvent(taskId, { type: 'TASK_PLANNED', message: '计划生成完成', data: { summary: plan?.planner?.summary } })
+    pushRuntimeEvent(taskId, { type: 'TASK_PLANNED', message: '计划生成完成', data: { summary: (plan as any)?.planner?.summary } })
 
     if (task.payload.autoExecute) {
       task.status = 'executing'
@@ -201,7 +223,7 @@ router.post('/tasks', authenticate, validateBody({
         taskId,
         status: task.status,
         traceId: req.traceId,
-        summary: plan?.planner?.summary,
+        summary: (plan as any)?.planner?.summary,
         requiresApproval: false,
         autoExecute: true
       }, '任务已创建，自动执行已在后台进行', 201)
@@ -209,13 +231,13 @@ router.post('/tasks', authenticate, validateBody({
 
     task.status = 'pending_approval'
     runtimeTasks.set(taskId, task)
-    pushRuntimeEvent(taskId, { type: 'TASK_PENDING_APPROVAL', message: '计划生成完成，等待审批', data: { summary: plan?.planner?.summary } })
+    pushRuntimeEvent(taskId, { type: 'TASK_PENDING_APPROVAL', message: '计划生成完成，等待审批', data: { summary: (plan as any)?.planner?.summary } })
 
     return sendSuccess(res, {
       taskId,
       status: task.status,
       traceId: req.traceId,
-      summary: plan?.planner?.summary,
+      summary: (plan as any)?.planner?.summary,
       requiresApproval: true
     }, '任务已创建并完成规划', 201)
   } catch (error: any) {
@@ -226,10 +248,13 @@ router.post('/tasks', authenticate, validateBody({
   }
 }, 60_000))
 
-router.post('/tasks/:taskId/approve', authenticate, authorize(['admin', 'manager']), withTimeout(async (req, res) => {
-  const task = runtimeTasks.get(req.params.taskId)
+router.post('/tasks/:taskId/approve', authenticate, authorize(['admin', 'manager']),
+  validateParams({ taskId: { type: 'string', required: true, trim: true } }),
+  withTimeout(async (req, res) => {
+    const taskId = ensureTaskId(req.params.taskId)
+  const task = runtimeTasks.get(taskId)
   if (!task) return sendError(res, '任务不存在', 404, { traceId: req.traceId })
-  if (task.status !== 'pending_approval') return sendError(res, '当前任务状态不可审批执行', 400, { status: task.status, traceId: req.traceId })
+  if (task.status !== 'pending_approval') return sendError(res, '当前任务状态不可审批执行', 409, { status: task.status, traceId: req.traceId })
 
   task.status = 'executing'
   task.updatedAt = new Date().toISOString()
@@ -265,7 +290,7 @@ router.post('/tasks/:taskId/approve', authenticate, authorize(['admin', 'manager
     return sendSuccess(res, {
       taskId: task.id,
       status: task.status,
-      autonomousSummary: autonomous?.plan?.planner?.summary,
+      autonomousSummary: (autonomous as any)?.plan?.planner?.summary,
       toolExecution: autonomous?.execution || []
     }, '任务审批并执行完成')
   } catch (error: any) {
@@ -277,9 +302,15 @@ router.post('/tasks/:taskId/approve', authenticate, authorize(['admin', 'manager
   }
 }, 45_000))
 
-router.post('/tasks/:taskId/reject', authenticate, authorize(['admin', 'manager']), async (req, res) => {
-  const task = runtimeTasks.get(req.params.taskId)
+router.post('/tasks/:taskId/reject', authenticate, authorize(['admin', 'manager']),
+  validateParams({ taskId: { type: 'string', required: true, trim: true } }),
+  async (req, res) => {
+    const taskId = ensureTaskId(req.params.taskId)
+  const task = runtimeTasks.get(taskId)
   if (!task) return sendError(res, '任务不存在', 404, { traceId: req.traceId })
+  if (task.status !== 'pending_approval') {
+    return sendError(res, '当前任务状态不可驳回', 409, { status: task.status, traceId: req.traceId })
+  }
 
   task.status = 'rejected'
   task.updatedAt = new Date().toISOString()
@@ -289,8 +320,11 @@ router.post('/tasks/:taskId/reject', authenticate, authorize(['admin', 'manager'
   return sendSuccess(res, { taskId: task.id, status: task.status }, '任务已驳回')
 })
 
-router.get('/tasks/:taskId', authenticate, (req, res) => {
-  const task = runtimeTasks.get(req.params.taskId)
+router.get('/tasks/:taskId', authenticate,
+  validateParams({ taskId: { type: 'string', required: true, trim: true } }),
+  (req, res) => {
+    const taskId = ensureTaskId(req.params.taskId)
+  const task = runtimeTasks.get(taskId)
   if (!task) return sendError(res, '任务不存在', 404, { traceId: req.traceId })
 
   return sendSuccess(res, {
@@ -307,9 +341,12 @@ router.get('/tasks/:taskId', authenticate, (req, res) => {
   })
 })
 
-router.get('/tasks/:taskId/events', async (req, res) => {
-  try {
-    const runtimeTask = runtimeTasks.get(req.params.taskId)
+router.get('/tasks/:taskId/events',
+  validateParams({ taskId: { type: 'string', required: true, trim: true } }),
+  async (req, res) => {
+    try {
+      const taskId = ensureTaskId(req.params.taskId)
+    const runtimeTask = runtimeTasks.get(taskId)
     if (!runtimeTask) return sendError(res, '任务不存在', 404, { traceId: req.traceId })
 
     const authHeader = req.headers.authorization
@@ -332,7 +369,7 @@ router.get('/tasks/:taskId/events', async (req, res) => {
       return sendError(res, '访问令牌无效或已过期', 401)
     }
 
-    const task = runtimeTasks.get(req.params.taskId)
+    const task = runtimeTasks.get(taskId)
     if (!task) return sendError(res, '任务不存在', 404, { traceId: req.traceId })
 
     res.setHeader('Content-Type', 'text/event-stream')
@@ -382,22 +419,26 @@ router.get('/tasks/:taskId/events', async (req, res) => {
   }
 })
 
-router.get('/context/:elderlyId', authenticate, withTimeout(async (req, res) => {
-  try {
-    const elderlyId = ensurePositiveInt(req.params.elderlyId, 'elderlyId')
-    const data = await agentVNextService.getContextSnapshot(elderlyId)
-    return sendSuccess(res, data)
-  } catch (error) {
-    return sendError(res, (error as Error).message || '获取上下文快照失败', 400, { traceId: req.traceId })
-  }
-}, 12_000))
+router.get('/context/:elderlyId', authenticate,
+  validateParams({ elderlyId: { type: 'number', required: true, min: 1 } }),
+  withTimeout(async (req, res) => {
+    try {
+      const elderlyId = Number(req.params.elderlyId)
+      const data = await agentVNextService.getContextSnapshot(elderlyId)
+      return sendSuccess(res, data)
+    } catch (error) {
+      return sendError(res, (error as Error).message || '获取上下文快照失败', 400, { traceId: req.traceId })
+    }
+  }, 12_000)
+)
 
 router.post('/plan', authenticate, validateBody({
   elderlyId: { type: 'number', required: true, min: 1 },
   eventSummary: { type: 'string', required: true, min: 1, max: 500, trim: true },
   strategyMode: { type: 'string', required: false, enum: ['conservative', 'balanced', 'aggressive'], trim: true },
   riskLevel: { type: 'string', required: false, enum: ['low', 'medium', 'high'], trim: true },
-  module: { type: 'string', required: false, enum: ['护理', '医护', '后勤', '收费', '接待'], trim: true }
+  module: { type: 'string', required: false, enum: ['护理', '医护', '后勤', '收费', '接待'], trim: true },
+  modelPreference: { type: 'string', required: false, enum: ['auto', 'qwen', 'deepseek', 'rule'], trim: true }
 }), withTimeout(async (req, res) => {
   try {
     const body = req.body || {}
@@ -413,10 +454,13 @@ router.post('/plan', authenticate, validateBody({
       strategyMode: normalizeMode(body.strategyMode),
       riskLevel: normalizeRisk(body.riskLevel),
       module: normalizeModule(body.module),
-      modelPreference: body.modelPreference,
-      sourceQuery: body.sourceQuery,
-      sourceAnswer: body.sourceAnswer,
-      sourceSuggestedAction: Array.isArray(body.sourceSuggestedAction) ? body.sourceSuggestedAction : []
+      modelPreference: normalizeModelPreference(body.modelPreference),
+      sourceQuery: typeof body.sourceQuery === 'string' ? body.sourceQuery : '',
+      sourceAnswer: typeof body.sourceAnswer === 'string' ? body.sourceAnswer : '',
+      sourceSuggestedAction: Array.isArray(body.sourceSuggestedAction)
+        ? body.sourceSuggestedAction.filter((x: any) => typeof x === 'string').slice(0, 20)
+        : [],
+      riskAnalysis: body.riskAnalysis || null
     })
 
     return sendSuccess(res, data)
@@ -450,7 +494,8 @@ router.post('/autonomous', authenticate, authorize(['admin', 'manager']), valida
   eventSummary: { type: 'string', required: true, min: 1, max: 500, trim: true },
   strategyMode: { type: 'string', required: false, enum: ['conservative', 'balanced', 'aggressive'], trim: true },
   riskLevel: { type: 'string', required: false, enum: ['low', 'medium', 'high'], trim: true },
-  module: { type: 'string', required: false, enum: ['护理', '医护', '后勤', '收费', '接待'], trim: true }
+  module: { type: 'string', required: false, enum: ['护理', '医护', '后勤', '收费', '接待'], trim: true },
+  modelPreference: { type: 'string', required: false, enum: ['auto', 'qwen', 'deepseek', 'rule'], trim: true }
 }), withTimeout(async (req, res) => {
   try {
     const body = req.body || {}
@@ -467,15 +512,17 @@ router.post('/autonomous', authenticate, authorize(['admin', 'manager']), valida
       riskLevel: normalizeRisk(body.riskLevel),
       module: normalizeModule(body.module),
       autoExecute: body.autoExecute !== false,
-      modelPreference: body.modelPreference,
-      sourceQuery: body.sourceQuery,
-      sourceAnswer: body.sourceAnswer,
-      sourceSuggestedAction: Array.isArray(body.sourceSuggestedAction) ? body.sourceSuggestedAction : []
+      modelPreference: normalizeModelPreference(body.modelPreference),
+      sourceQuery: typeof body.sourceQuery === 'string' ? body.sourceQuery : '',
+      sourceAnswer: typeof body.sourceAnswer === 'string' ? body.sourceAnswer : '',
+      sourceSuggestedAction: Array.isArray(body.sourceSuggestedAction)
+        ? body.sourceSuggestedAction.filter((x: any) => typeof x === 'string').slice(0, 20)
+        : []
     })
 
     return sendSuccess(res, {
-      strategyMode: data.plan?.strategyMode,
-      summary: data.plan?.planner?.summary,
+      strategyMode: (data.plan as any)?.strategyMode,
+      summary: (data.plan as any)?.planner?.summary,
       executed: data.executed,
       toolExecution: {
         total: data.execution?.length || 0,
@@ -483,7 +530,7 @@ router.post('/autonomous', authenticate, authorize(['admin', 'manager']), valida
         failed: (data.execution || []).filter((x: any) => !x.success).length
       },
       executionTrace: data.executionTrace,
-      planner: data.plan?.planner,
+      planner: (data.plan as any)?.planner,
       execution: data.execution
     })
   } catch (error) {
@@ -497,7 +544,9 @@ router.post('/outcome', authenticate, validateBody({
   isOverdue: { type: 'boolean', required: true },
   isRelapse: { type: 'boolean', required: true },
   familySatisfaction: { type: 'number', required: true, min: 0, max: 10 },
-  followUpResult: { type: 'string', required: true, min: 1, max: 1000, trim: true }
+  followUpResult: { type: 'string', required: true, min: 1, max: 1000, trim: true },
+  warningId: { type: 'number', required: false, min: 1 },
+  serviceRequestId: { type: 'number', required: false, min: 1 }
 }), withTimeout(async (req, res) => {
   try {
     const body = req.body || {}

@@ -16,7 +16,8 @@ import {
   Alert,
   Descriptions,
   Tooltip,
-  Divider
+  Divider,
+  InputNumber
 } from 'antd'
 import axios from '../utils/axiosInstance'
 import './AgentWorkbench.css'
@@ -38,6 +39,15 @@ const AgentWorkbench: React.FC = () => {
   const [timelineData, setTimelineData] = useState<any[]>([])
   const [selectedElderlyName, setSelectedElderlyName] = useState<string>('')
   const [aiLoading, setAiLoading] = useState(false)
+  const [proactiveLoading, setProactiveLoading] = useState(false)
+  const [proactiveForm, setProactiveForm] = useState({
+    doorHours: 12,
+    waterHours: 24,
+    mattressHeartRate: 110,
+    mattressTurnOver: 12,
+    serviceGapDays: 3,
+    selectedSensor: 'door_contact' as 'door_contact' | 'water_meter' | 'mattress' | 'service_gap'
+  })
 
   const fetchData = useCallback(async (moduleValue?: string, daysValue?: number) => {
     setLoading(true)
@@ -179,6 +189,41 @@ const AgentWorkbench: React.FC = () => {
     }
   }
 
+  const triggerProactiveSensor = async (sensorType: string, payload: Record<string, any>) => {
+    if (!payload.elderlyId) return message.warning('该项未关联老人')
+    setProactiveLoading(true)
+    try {
+      const res = await axios.post('/health/proactive/sensor', {
+        elderlyId: payload.elderlyId,
+        sensorType,
+        ...payload
+      })
+      message.success(res.data?.message || '已触发主动感知预警')
+      fetchData(moduleFilter)
+    } catch (error: any) {
+      message.error(error?.response?.data?.error || '触发主动感知失败')
+    } finally {
+      setProactiveLoading(false)
+    }
+  }
+
+  const triggerSelectedProactive = async () => {
+    const target = tasks?.[0]?.elderlyId
+    if (!target) return message.warning('请先确保列表中存在关联老人，或先创建一条任务')
+
+    const selected = proactiveForm.selectedSensor
+    if (selected === 'door_contact') {
+      return triggerProactiveSensor('door_contact', { elderlyId: target, value: proactiveForm.doorHours, meta: { inactiveHours: proactiveForm.doorHours } })
+    }
+    if (selected === 'water_meter') {
+      return triggerProactiveSensor('water_meter', { elderlyId: target, value: 0, value2: proactiveForm.waterHours, meta: { noWaterHours: proactiveForm.waterHours } })
+    }
+    if (selected === 'mattress') {
+      return triggerProactiveSensor('mattress', { elderlyId: target, value: proactiveForm.mattressHeartRate, value2: proactiveForm.mattressTurnOver, meta: { heartRate: proactiveForm.mattressHeartRate, turnOver: proactiveForm.mattressTurnOver } })
+    }
+    return triggerProactiveSensor('service_gap', { elderlyId: target, value: proactiveForm.serviceGapDays, meta: { gapDays: proactiveForm.serviceGapDays } })
+  }
+
   const tableData = useMemo(() => (tasks || []).map((t: any, i: number) => ({
     ...t,
     __rowKey: t.id || `${t.sourceType || 'task'}-${t.sourceId || 'na'}-${i}`
@@ -255,7 +300,7 @@ const AgentWorkbench: React.FC = () => {
 
   return (
     <div className="agent-workbench">
-      <Title level={4} className="page-title">总控 Agent 工作台</Title>
+      <Title level={4} className="page-title">社区养老 Agent 指挥中心</Title>
       
       <Row gutter={[24, 24]} className="overview-section">
         <Col xs={24} sm={12} md={8} lg={4}>
@@ -416,7 +461,24 @@ const AgentWorkbench: React.FC = () => {
       <Card className="tasks-card">
         <div className="tasks-header">
           <Text strong className="tasks-title">机构养老总控 Agent 工作台</Text>
-          <Space size="middle">
+          <Space size="middle" wrap>
+            <Select
+              style={{ width: 140 }}
+              value={proactiveForm.selectedSensor}
+              onChange={(value) => setProactiveForm((prev) => ({ ...prev, selectedSensor: value }))}
+              options={[
+                { label: '门磁', value: 'door_contact' },
+                { label: '水表', value: 'water_meter' },
+                { label: '床垫', value: 'mattress' },
+                { label: '服务空窗', value: 'service_gap' }
+              ]}
+            />
+            <InputNumber style={{ width: 90 }} value={proactiveForm.doorHours} min={1} max={72} onChange={(v) => setProactiveForm((prev) => ({ ...prev, doorHours: Number(v || 0) }))} addonBefore="未开门(h)" />
+            <InputNumber style={{ width: 100 }} value={proactiveForm.waterHours} min={1} max={72} onChange={(v) => setProactiveForm((prev) => ({ ...prev, waterHours: Number(v || 0) }))} addonBefore="无用水(h)" />
+            <InputNumber style={{ width: 110 }} value={proactiveForm.mattressHeartRate} min={40} max={180} onChange={(v) => setProactiveForm((prev) => ({ ...prev, mattressHeartRate: Number(v || 0) }))} addonBefore="床垫心率" />
+            <InputNumber style={{ width: 110 }} value={proactiveForm.mattressTurnOver} min={0} max={60} onChange={(v) => setProactiveForm((prev) => ({ ...prev, mattressTurnOver: Number(v || 0) }))} addonBefore="翻身次" />
+            <InputNumber style={{ width: 110 }} value={proactiveForm.serviceGapDays} min={1} max={30} onChange={(v) => setProactiveForm((prev) => ({ ...prev, serviceGapDays: Number(v || 0) }))} addonBefore="空窗天" />
+            <Button loading={proactiveLoading} type="primary" onClick={triggerSelectedProactive}>触发主动感知预警</Button>
             <Select
               allowClear
               placeholder="筛选模块"

@@ -1,9 +1,17 @@
 import axios from 'axios'
 
+interface AxiosErrorLike {
+  response?: {
+    status?: number
+    data?: unknown
+  }
+  message?: string
+}
+
 interface TriageInput {
   elderlyName: string
   age: number
-  metrics: Record<string, any>
+  metrics: Record<string, unknown>
   historySummary?: string
 }
 
@@ -17,8 +25,11 @@ interface DispatchInput {
 
 interface AnswerInput {
   question: string
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 }
+
+type ModelProvider = 'qwen' | 'deepseek'
+type ModelPreference = 'auto' | 'qwen' | 'deepseek' | 'rule'
 
 class AIAgentService {
   private parseModelJson(content: string) {
@@ -46,57 +57,80 @@ class AIAgentService {
     return process.env.QWEN_API_KEY || process.env.DASHSCOPE_API_KEY || ''
   }
 
+  private get deepseekApiKey() {
+    return process.env.DEEPSEEK_API_KEY || ''
+  }
+
   private get enabled() {
-    return process.env.AI_AGENT_ENABLED === 'true' || Boolean(this.qwenApiKey)
+    return process.env.AI_AGENT_ENABLED === 'true' || Boolean(this.qwenApiKey || this.deepseekApiKey)
   }
 
   private get qwenModel() {
     return process.env.QWEN_MODEL || 'qwen-plus'
   }
 
+  private get deepseekModel() {
+    return process.env.DEEPSEEK_MODEL || 'deepseek-chat'
+  }
+
   private get qwenBaseURL() {
     return process.env.QWEN_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1'
+  }
+
+  private get deepseekBaseURL() {
+    return process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1'
   }
 
   private get qwenTimeoutMs() {
     return Number(process.env.QWEN_TIMEOUT_MS || 5000)
   }
 
-  private async callQwen(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>) {
-    if (!this.enabled || !this.qwenApiKey) {
-      throw new Error('AI_AGENT 未启用或缺少 QWEN_API_KEY')
+  private get deepseekTimeoutMs() {
+    return Number(process.env.DEEPSEEK_TIMEOUT_MS || process.env.QWEN_TIMEOUT_MS || 5000)
+  }
+
+  private async callCompatible(params: {
+    provider: ModelProvider
+    baseURL: string
+    apiKey: string
+    model: string
+    timeoutMs: number
+    messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>
+  }) {
+    if (!this.enabled || !params.apiKey) {
+      throw new Error(`AI_AGENT 未启用或缺少 ${params.provider.toUpperCase()} API_KEY`)
     }
 
     const requestBody = {
-      model: this.qwenModel,
+      model: params.model,
       temperature: 0.3,
-      messages
+      messages: params.messages
     }
 
     const startedAt = Date.now()
-    console.info('[AIAgentService] Qwen request start', {
-      baseURL: this.qwenBaseURL,
-      model: this.qwenModel,
-      messageCount: messages.length,
-      timeoutMs: this.qwenTimeoutMs,
-      firstMessagePreview: messages[0]?.content?.slice(0, 120)
+    console.info(`[AIAgentService] ${params.provider} request start`, {
+      baseURL: params.baseURL,
+      model: params.model,
+      messageCount: params.messages.length,
+      timeoutMs: params.timeoutMs,
+      firstMessagePreview: params.messages[0]?.content?.slice(0, 120)
     })
 
     try {
       const response = await axios.post(
-        `${this.qwenBaseURL}/chat/completions`,
+        `${params.baseURL}/chat/completions`,
         requestBody,
         {
           headers: {
-            Authorization: `Bearer ${this.qwenApiKey}`,
+            Authorization: `Bearer ${params.apiKey}`,
             'Content-Type': 'application/json'
           },
-          timeout: this.qwenTimeoutMs
+          timeout: params.timeoutMs
         }
       )
 
       const content = response.data?.choices?.[0]?.message?.content
-      console.info('[AIAgentService] Qwen request success', {
+      console.info(`[AIAgentService] ${params.provider} request success`, {
         elapsedMs: Date.now() - startedAt,
         status: response.status,
         hasContent: Boolean(content)
@@ -105,39 +139,86 @@ class AIAgentService {
       if (!content) throw new Error('模型返回为空')
 
       return this.parseModelJson(content)
-    } catch (error: any) {
-      console.error('[AIAgentService] Qwen request failed', {
+    } catch (error: unknown) {
+      const err = error as AxiosErrorLike
+      console.error(`[AIAgentService] ${params.provider} request failed`, {
         elapsedMs: Date.now() - startedAt,
-        status: error?.response?.status,
-        data: error?.response?.data,
-        message: error?.message,
-        baseURL: this.qwenBaseURL,
-        model: this.qwenModel
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+        baseURL: params.baseURL,
+        model: params.model
       })
       throw error
     }
   }
 
-  private async tryQwenWithFallback<T>(
-    fallbackName: string,
-    runner: () => Promise<T>,
-    fallbackValue: T,
-    meta: Record<string, any>
-  ): Promise<T> {
-    try {
-      return await runner()
-    } catch (error: any) {
-      console.error(`[AIAgentService] ${fallbackName} 调用失败，直接使用规则兜底:`, {
-        status: error?.response?.status,
-        data: error?.response?.data,
-        message: error?.message,
-        ...meta
-      })
-      return fallbackValue
-    }
+  private getModelCallOrder(preference: ModelPreference): ModelProvider[] {
+    if (preference === 'qwen') return ['qwen', 'deepseek']
+    if (preference === 'deepseek') return ['deepseek', 'qwen']
+    return ['qwen', 'deepseek']
   }
 
-  async triage(input: TriageInput) {
+  private async callByProvider(
+    provider: ModelProvider,
+    messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>
+  ) {
+    if (provider === 'qwen') {
+      return this.callCompatible({
+        provider: 'qwen',
+        baseURL: this.qwenBaseURL,
+        apiKey: this.qwenApiKey,
+        model: this.qwenModel,
+        timeoutMs: this.qwenTimeoutMs,
+        messages
+      })
+    }
+
+    return this.callCompatible({
+      provider: 'deepseek',
+      baseURL: this.deepseekBaseURL,
+      apiKey: this.deepseekApiKey,
+      model: this.deepseekModel,
+      timeoutMs: this.deepseekTimeoutMs,
+      messages
+    })
+  }
+
+  private async tryModelWithFallback<T>(
+    fallbackName: string,
+    messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
+    fallbackValue: T,
+    preference: ModelPreference = 'auto',
+    _meta: Record<string, unknown>
+  ): Promise<T> {
+    if (preference === 'rule') {
+      return fallbackValue
+    }
+
+    const order = this.getModelCallOrder(preference)
+    let lastError: unknown = null
+
+    for (const provider of order) {
+      try {
+        const result = await this.callByProvider(provider, messages)
+        return { ...(result as object), _meta: { source: provider } } as T
+      } catch (error) {
+        lastError = error
+      }
+    }
+
+    console.error(`[AIAgentService] ${fallbackName} 全部模型调用失败，使用规则兜底:`, {
+      status: (lastError as any)?.response?.status,
+      data: (lastError as any)?.response?.data,
+      message: (lastError as any)?.message,
+      preference,
+      ..._meta
+    })
+
+    return fallbackValue
+  }
+
+  async triage(input: TriageInput, modelPreference: ModelPreference = 'auto') {
     const system = `你是社区养老医疗分诊AI。输出JSON：{riskLevel,reason,actions,followUpMinutes,familyNotify}`
     const user = `请根据数据分诊，要求平衡风格（避免误报也避免漏报）。\n${JSON.stringify(input)}`
 
@@ -154,22 +235,21 @@ class AIAgentService {
       }
     }
 
-    const result = await this.tryQwenWithFallback(
-      'Qwen triage',
-      () => this.callQwen([
+    const result = await this.tryModelWithFallback(
+      'triage',
+      [
         { role: 'system', content: system },
         { role: 'user', content: user }
-      ]),
+      ],
       fallback,
+      modelPreference,
       { input }
     )
 
-    return result._meta?.source === 'fallback'
-      ? result
-      : { ...result, _meta: { source: 'qwen' } }
+    return result
   }
 
-  async dispatch(input: DispatchInput) {
+  async dispatch(input: DispatchInput, modelPreference: ModelPreference = 'auto') {
     const system = `你是养老机构调度AI。输出JSON：{assigneeRole,priority,steps,slaMinutes,escalationRule}`
     const user = `请生成派单方案（平衡风格）。\n${JSON.stringify(input)}`
 
@@ -186,22 +266,21 @@ class AIAgentService {
       }
     }
 
-    const result = await this.tryQwenWithFallback(
-      'Qwen dispatch',
-      () => this.callQwen([
+    const result = await this.tryModelWithFallback(
+      'dispatch',
+      [
         { role: 'system', content: system },
         { role: 'user', content: user }
-      ]),
+      ],
       fallback,
+      modelPreference,
       { input }
     )
 
-    return result._meta?.source === 'fallback'
-      ? result
-      : { ...result, _meta: { source: 'qwen' } }
+    return result
   }
 
-  async answer(input: AnswerInput) {
+  async answer(input: AnswerInput, modelPreference: ModelPreference = 'auto') {
     const system = `你是社区养老场景的智能问答助手。请先直接回答用户问题，再给出是否需要执行动作的判断。输出JSON：{answer,analysis,needAction,actionSuggestion,followUpQuestions}`
     const user = `问题：${input.question}\n上下文：${JSON.stringify(input.context || {})}`
 
@@ -228,23 +307,22 @@ class AIAgentService {
       }
     }
 
-    const result = await this.tryQwenWithFallback(
-      'Qwen answer',
-      () => this.callQwen([
+    const result = await this.tryModelWithFallback(
+      'answer',
+      [
         { role: 'system', content: system },
         { role: 'user', content: user }
-      ]),
+      ],
       fallback,
+      modelPreference,
       { input }
     ) as typeof fallback
 
-    return result._meta?.source === 'fallback'
-      ? result
-      : { ...result, _meta: { source: 'qwen' } }
+    return result
   }
 
-  async copilot(question: string, context?: Record<string, any>) {
-    const answer = await this.answer({ question, context })
+  async copilot(question: string, context?: Record<string, unknown>, modelPreference: ModelPreference = 'auto') {
+    const answer = await this.answer({ question, context }, modelPreference)
     return {
       summary: answer.answer,
       todo: answer.actionSuggestion ? [answer.actionSuggestion] : [],
@@ -259,20 +337,22 @@ class AIAgentService {
     triageInput: TriageInput
     dispatchInput: DispatchInput
     copilotQuestion: string
-    context?: Record<string, any>
+    context?: Record<string, unknown>
+    modelPreference?: ModelPreference
   }) {
+    const preference = payload.modelPreference || 'auto'
     const [triage, dispatch, copilot] = await Promise.all([
-      this.triage(payload.triageInput),
-      this.dispatch(payload.dispatchInput),
-      this.copilot(payload.copilotQuestion, payload.context)
+      this.triage(payload.triageInput, preference),
+      this.dispatch(payload.dispatchInput, preference),
+      this.copilot(payload.copilotQuestion, payload.context, preference)
     ])
 
     return {
       triage,
       dispatch,
       copilot,
-      model: this.qwenModel,
-      provider: 'qwen'
+      model: preference,
+      provider: triage?._meta?.source || dispatch?._meta?.source || copilot?._meta?.source || 'fallback'
     }
   }
 }

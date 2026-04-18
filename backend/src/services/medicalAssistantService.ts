@@ -59,7 +59,7 @@ class MedicalAssistantService {
       order: [['createdAt', 'DESC']]
     })
 
-    const latest: Record<string, any> = {}
+    const latest: Record<string, { value: number; value2?: number; unit: string; at: Date; abnormal: boolean }> = {}
     for (const item of records) {
       if (!latest[item.dataType]) {
         latest[item.dataType] = {
@@ -105,7 +105,7 @@ class MedicalAssistantService {
     await outreachService.notifyFamilyForUrgentRisk(elderly, content)
   }
 
-  private buildPlainMedicalAdvice(latest: Record<string, any>) {
+  private buildPlainMedicalAdvice(latest: Record<string, { value: number; value2?: number }>) {
     const suggestions: string[] = []
     const emergencySignals: string[] = []
     let level: 'normal' | 'attention' | 'urgent' = 'normal'

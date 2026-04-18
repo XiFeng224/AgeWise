@@ -10,6 +10,7 @@ import notificationRoutes from './notificationRoutes'
 import agentRoutes from './agentRoutes'
 import aiAgentRoutes from './aiAgentRoutes'
 import agentVNextRoutes from './agentVNextRoutes'
+import riskAnalysisRoutes from './riskAnalysisRoutes'
 
 const router = Router()
 
@@ -25,6 +26,7 @@ router.use('/notifications', notificationRoutes)
 router.use('/agent', agentRoutes)
 router.use('/ai-agent', aiAgentRoutes)
 router.use('/agent-vnext', agentVNextRoutes)
+router.use('/risk-analysis', riskAnalysisRoutes)
 
 // API 文档路由
 router.get('/docs', (req, res) => {
@@ -32,6 +34,16 @@ router.get('/docs', (req, res) => {
     message: '社区养老数据查询与风险预警系统 API',
     version: '1.0.0',
     endpoints: {
+      errorCodes: {
+        400: '参数错误/校验失败',
+        401: '未登录或令牌失效',
+        403: '权限不足',
+        404: '资源不存在',
+        409: '状态冲突（如任务状态不允许当前操作）',
+        422: '业务规则不满足',
+        500: '服务器内部错误',
+        504: '处理超时'
+      },
       auth: {
         'POST /api/auth/login': '用户登录',
         'POST /api/auth/register': '用户注册',
@@ -56,6 +68,7 @@ router.get('/docs', (req, res) => {
       health: {
         'POST /api/health/realtime/ingest': '实时监测数据接入并自动生成医疗建议',
         'GET /api/health/realtime/:elderlyId/summary': '获取老人实时健康摘要与通俗建议',
+        'POST /api/health/proactive/sensor': '主动感知设备接入（门磁/水表/床垫/服务空窗）并自动触发预警',
         'POST /api/health/health-data': '处理设备上传的健康数据',
         'POST /api/health/health-data/batch': '批量处理健康数据',
         'GET /api/health/health-data/:elderlyId': '获取老人健康数据历史',
@@ -103,6 +116,17 @@ router.get('/docs', (req, res) => {
         'GET /api/statistics/overview': '系统概览统计',
         'GET /api/statistics/elderly': '老人数据统计',
         'GET /api/statistics/services': '服务统计'
+      },
+      riskAnalysis: {
+        'GET /api/risk-analysis/:elderlyId': '获取单老人风险分析报告（含评分、趋势、建议）'
+      },
+      agentVNext: {
+        'POST /api/agent-vnext/tasks': '创建运行台任务（支持携带风险分析上下文）',
+        'GET /api/agent-vnext/tasks/:taskId': '获取任务快照',
+        'GET /api/agent-vnext/tasks/:taskId/events': 'SSE事件流（支持token查询参数）',
+        'POST /api/agent-vnext/tasks/:taskId/approve': '审批并执行任务',
+        'POST /api/agent-vnext/tasks/:taskId/reject': '驳回任务',
+        'POST /api/agent-vnext/policy/weekly-update': '每周策略更新'
       }
     }
   })

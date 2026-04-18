@@ -213,7 +213,7 @@ class ActivityTrackService {
     const timeSinceLastActivity = new Date().getTime() - latestActivity.startTime.getTime()
     if (timeSinceLastActivity > 6 * 60 * 60 * 1000) { // 6小时无活动
       const anomaly = {
-        activityType: 'no_activity',
+        activityType: 'no_activity' as const,
         message: '长时间无活动',
         duration: Math.round(timeSinceLastActivity / (1000 * 60 * 60)),
         timestamp: new Date()
@@ -227,7 +227,7 @@ class ActivityTrackService {
     const bathroomActivities = history.filter(a => a.activityType === 'bathroom')
     if (bathroomActivities.length > 15) { // 一天超过15次上厕所
       const anomaly = {
-        activityType: 'frequent_bathroom',
+        activityType: 'frequent_bathroom' as const,
         message: '频繁上厕所',
         count: bathroomActivities.length,
         timestamp: new Date()
@@ -244,7 +244,7 @@ class ActivityTrackService {
     })
     if (nightActivities.length > 3) { // 夜间活动超过3次
       const anomaly = {
-        activityType: 'night_activity',
+        activityType: 'night_activity' as const,
         message: '夜间频繁活动',
         count: nightActivities.length,
         timestamp: new Date()

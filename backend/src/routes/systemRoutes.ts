@@ -6,7 +6,39 @@ import { User, Elderly, Warning } from '../models'
 
 const router = Router()
 
-// 所有路由都需要认证
+// 系统健康检查（公开接口，无需认证）
+router.get('/health', async (req, res) => {
+  try {
+    const healthStatus = {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      services: {
+        database: 'connected',
+        cache: 'connected',
+        agent: 'connected',
+        fileSystem: 'healthy'
+      },
+      metrics: {
+        uptime: process.uptime(),
+        memoryUsage: process.memoryUsage(),
+        cpuUsage: process.cpuUsage()
+      }
+    }
+
+    res.json({
+      success: true,
+      data: healthStatus
+    })
+  } catch (error) {
+    console.error('系统健康检查失败:', error)
+    res.status(500).json({
+      success: false,
+      error: '系统健康检查失败'
+    })
+  }
+})
+
+// 其他路由都需要认证
 router.use(authenticate)
 
 // 获取系统配置（仅管理员）
@@ -219,111 +251,6 @@ router.get('/ai-metrics', authorize(['admin', 'manager']), async (req, res) => {
   }
 })
 
-// 重置演示数据（仅管理员）
-router.post('/reset-demo-users', authorize(['admin']), async (req, res) => {
-  try {
-    await Warning.destroy({ where: {}, truncate: true, force: true })
-    await Elderly.destroy({ where: {}, truncate: true, force: true })
-    await User.destroy({ where: {}, truncate: true, force: true })
 
-    const adminPwd = await bcrypt.hash('123456', 12)
-    const managerPwd = await bcrypt.hash('admin123', 12)
-    const gridPwd = await bcrypt.hash('admin123', 12)
-
-    const admin = await User.create({
-      username: 'admin',
-      password: adminPwd,
-      email: 'admin@elderlycare.com',
-      phone: '13800000000',
-      role: 'admin',
-      realName: '系统管理员',
-      isActive: true
-    })
-
-    await User.create({
-      username: 'manager1',
-      password: managerPwd,
-      email: 'manager1@elderlycare.com',
-      phone: '13800000001',
-      role: 'manager',
-      realName: '社区管理员张三',
-      isActive: true
-    })
-
-    const grid = await User.create({
-      username: 'grid1',
-      password: gridPwd,
-      email: 'grid1@elderlycare.com',
-      phone: '13800000002',
-      role: 'grid',
-      realName: '网格员李四',
-      isActive: true
-    })
-
-    await Elderly.bulkCreate([
-      {
-        name: '张大爷', age: 78, gender: 'male', idCard: '110101194701011234', phone: '13800001234',
-        address: '幸福小区1栋101室', emergencyContact: '张小明', emergencyPhone: '13800005678',
-        healthStatus: 'good', riskLevel: 'low', isAlone: true, gridMemberId: grid.id, notes: '独居老人'
-      },
-      {
-        name: '李奶奶', age: 82, gender: 'female', idCard: '110101194402022345', phone: '13800002345',
-        address: '幸福小区2栋202室', emergencyContact: '李小红', emergencyPhone: '13800006789',
-        healthStatus: 'fair', riskLevel: 'medium', isAlone: true, gridMemberId: grid.id, notes: '高血压'
-      }
-    ])
-
-    res.json({
-      success: true,
-      message: '演示数据已重置',
-      data: {
-        accounts: [
-          { username: 'admin', password: '123456' },
-          { username: 'manager1', password: 'admin123' },
-          { username: 'grid1', password: 'admin123' }
-        ],
-        operator: admin.id
-      }
-    })
-  } catch (error) {
-    console.error('重置演示数据失败:', error)
-    res.status(500).json({
-      success: false,
-      error: '重置演示数据失败'
-    })
-  }
-})
-
-// 系统健康检查
-router.get('/health', async (req, res) => {
-  try {
-    const healthStatus = {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      services: {
-        database: 'connected',
-        cache: 'connected',
-        agent: 'connected',
-        fileSystem: 'healthy'
-      },
-      metrics: {
-        uptime: process.uptime(),
-        memoryUsage: process.memoryUsage(),
-        cpuUsage: process.cpuUsage()
-      }
-    }
-
-    res.json({
-      success: true,
-      data: healthStatus
-    })
-  } catch (error) {
-    console.error('系统健康检查失败:', error)
-    res.status(500).json({
-      success: false,
-      error: '系统健康检查失败'
-    })
-  }
-})
 
 export default router

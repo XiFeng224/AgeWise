@@ -429,18 +429,22 @@ class WarningManagementService {
         throw new Error('老人不存在')
       }
 
-      // 转换风险等级
-      const riskLevelMap: Record<string, 'low' | 'medium' | 'high'> = {
-        low: 'low',
-        medium: 'medium',
-        high: 'high'
+      // 转换风险等级（输入 green/yellow/red，模型存储 low/medium/high）
+      const riskLevelMap: Record<'green' | 'yellow' | 'red', 'low' | 'medium' | 'high'> = {
+        green: 'low',
+        yellow: 'medium',
+        red: 'high'
+      }
+      const riskLevel = riskLevelMap[warningData.level]
+      if (!riskLevel) {
+        throw new Error(`无效预警等级: ${warningData.level}`)
       }
 
       // 创建预警记录
       const warning = await Warning.create({
         elderlyId,
         warningType: warningData.warningType,
-        riskLevel: riskLevelMap[warningData.level],
+        riskLevel,
         title: warningData.title,
         description: warningData.description,
         triggerData: warningData.triggerData,

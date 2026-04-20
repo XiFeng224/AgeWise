@@ -81,12 +81,12 @@ class AIAgentService {
     return process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1'
   }
 
-  private get qwenTimeoutMs() {
-    return Number(process.env.QWEN_TIMEOUT_MS || 5000)
+  private get qwenTimeoutMs(): number {
+    return Number(process.env.QWEN_TIMEOUT_MS || 10000)
   }
 
-  private get deepseekTimeoutMs() {
-    return Number(process.env.DEEPSEEK_TIMEOUT_MS || process.env.QWEN_TIMEOUT_MS || 5000)
+  private get deepseekTimeoutMs(): number {
+    return Number(process.env.DEEPSEEK_TIMEOUT_MS || process.env.QWEN_TIMEOUT_MS || 10000)
   }
 
   private async callCompatible(params: {

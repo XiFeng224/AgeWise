@@ -6,6 +6,60 @@ import database from '../config/database'
 
 const sequelize = database
 
+const riskLevelZhMap: Record<'low' | 'medium' | 'high', '低风险' | '中风险' | '高风险'> = {
+  low: '低风险',
+  medium: '中风险',
+  high: '高风险'
+}
+
+const statusZhMap: Record<'pending' | 'processing' | 'resolved', '待处理' | '处理中' | '已解决'> = {
+  pending: '待处理',
+  processing: '处理中',
+  resolved: '已解决'
+}
+
+type RiskLevelCanonical = 'low' | 'medium' | 'high'
+type RiskLevelInput =
+  | 'low' | 'medium' | 'high'
+  | 'green' | 'yellow' | 'red'
+  | '低' | '中' | '高'
+  | '低风险' | '中风险' | '高风险'
+
+const riskLevelInputMap: Record<RiskLevelInput, RiskLevelCanonical> = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+  green: 'low',
+  yellow: 'medium',
+  red: 'high',
+  '低': 'low',
+  '中': 'medium',
+  '高': 'high',
+  '低风险': 'low',
+  '中风险': 'medium',
+  '高风险': 'high'
+}
+
+const normalizeRiskLevel = (value?: string): RiskLevelCanonical | undefined => {
+  if (!value) return undefined
+  const v = String(value).trim().toLowerCase() as RiskLevelInput
+  if (v in riskLevelInputMap) {
+    return riskLevelInputMap[v]
+  }
+  return undefined
+}
+
+const enrichWarning = (warning: any) => {
+  const plain = warning?.toJSON ? warning.toJSON() : warning
+  const riskLevel = plain?.riskLevel as 'low' | 'medium' | 'high' | undefined
+  const status = plain?.status as 'pending' | 'processing' | 'resolved' | undefined
+  return {
+    ...plain,
+    riskLevelZh: riskLevel ? riskLevelZhMap[riskLevel] : undefined,
+    statusZh: status ? statusZhMap[status] : undefined
+  }
+}
+
 const getWarnings = async (req: Request, res: Response) => {
   try {
     const { page = 1, limit = 10, status, riskLevel, elderlyName, startDate, endDate } = req.query
@@ -20,9 +74,12 @@ const getWarnings = async (req: Request, res: Response) => {
       whereClause.status = status
     }
 
-    // 风险等级筛选
+    // 风险等级筛选（兼容中文/颜色/英文）
     if (riskLevel) {
-      whereClause.riskLevel = riskLevel
+      const normalizedRiskLevel = normalizeRiskLevel(String(riskLevel))
+      if (normalizedRiskLevel) {
+        whereClause.riskLevel = normalizedRiskLevel
+      }
     }
 
     // 时间范围筛选
@@ -72,7 +129,7 @@ const getWarnings = async (req: Request, res: Response) => {
 
     return res.json({
       success: true,
-      data: rows,
+      data: rows.map((item: any) => enrichWarning(item)),
       pagination: {
         total: count,
         page: parseInt(page as string),
@@ -138,7 +195,7 @@ const getWarningById = async (req: Request, res: Response) => {
 
     return res.json({
       success: true,
-      data: warning
+      data: enrichWarning(warning)
     })
   } catch (error) {
     console.error('获取预警详情错误:', error)
@@ -160,11 +217,20 @@ const createWarning = async (req: Request, res: Response) => {
       triggerData
     } = req.body
 
+    const normalizedRiskLevel = normalizeRiskLevel(riskLevel)
+
     // 验证必填字段
     if (!elderlyId || !warningType || !riskLevel || !title || !description) {
       return res.status(400).json({
         success: false,
         error: '请填写所有必填字段'
+      })
+    }
+
+    if (!normalizedRiskLevel) {
+      return res.status(400).json({
+        success: false,
+        error: '风险等级不合法，请使用：低/中/高（或 low/medium/high）'
       })
     }
 
@@ -181,7 +247,7 @@ const createWarning = async (req: Request, res: Response) => {
     const warning = await Warning.create({
       elderlyId,
       warningType,
-      riskLevel,
+      riskLevel: normalizedRiskLevel,
       title,
       description,
       triggerData: triggerData || {},
@@ -194,7 +260,7 @@ const createWarning = async (req: Request, res: Response) => {
     return res.status(201).json({
       success: true,
       message: '预警记录创建成功',
-      data: warning
+      data: enrichWarning(warning)
     })
   } catch (error) {
     console.error('创建预警记录错误:', error)
@@ -281,7 +347,7 @@ const updateWarning = async (req: Request, res: Response) => {
     return res.json({
       success: true,
       message: '预警记录更新成功',
-      data: warning
+      data: enrichWarning(warning)
     })
   } catch (error) {
     console.error('更新预警记录错误:', error)
@@ -335,9 +401,9 @@ const getWarningStats = async (req: Request, res: Response) => {
     })
 
     const riskLevelStats = [
-      { riskLevel: 'high', count: riskCountMap.get('high') || 0 },
-      { riskLevel: 'medium', count: riskCountMap.get('medium') || 0 },
-      { riskLevel: 'low', count: riskCountMap.get('low') || 0 }
+      { riskLevel: 'high', riskLevelZh: '高风险', count: riskCountMap.get('high') || 0 },
+      { riskLevel: 'medium', riskLevelZh: '中风险', count: riskCountMap.get('medium') || 0 },
+      { riskLevel: 'low', riskLevelZh: '低风险', count: riskCountMap.get('low') || 0 }
     ]
 
     // 按预警类型统计

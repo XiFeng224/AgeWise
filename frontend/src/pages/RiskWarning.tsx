@@ -40,9 +40,11 @@ interface WarningItem {
   warningType: string
   warningTypeZh?: string
   riskLevel: 'low' | 'medium' | 'high'
+  riskLevelZh?: string
   title: string
   description: string
   status: 'pending' | 'processing' | 'resolved'
+  statusZh?: string
   handleTime?: string
   handleNotes?: string
   followUpAt?: string
@@ -103,11 +105,11 @@ const RiskWarning: React.FC = () => {
 
   const getRiskLevelConfig = (level: string) => {
     const config = {
-      high: { color: 'red', text: '紧急', icon: <ExclamationCircleOutlined /> },
-      medium: { color: 'orange', text: '较重', icon: <WarningOutlined /> },
-      low: { color: 'green', text: '一般', icon: <ClockCircleOutlined /> }
+      high: { color: 'red', text: '高风险', icon: <ExclamationCircleOutlined /> },
+      medium: { color: 'orange', text: '中风险', icon: <WarningOutlined /> },
+      low: { color: 'green', text: '低风险', icon: <ClockCircleOutlined /> }
     }
-    return config[level as keyof typeof config]
+    return config[level as keyof typeof config] || { color: 'default', text: '未知风险', icon: <WarningOutlined /> }
   }
 
   const getStatusConfig = (status: string) => {
@@ -400,7 +402,7 @@ const RiskWarning: React.FC = () => {
                     type: 'pie',
                     radius: ['45%', '70%'],
                     data: (warningStats?.riskLevel || []).map((item: any) => ({
-                      name: item.riskLevel === 'high' ? '紧急' : item.riskLevel === 'medium' ? '较重' : '一般',
+                      name: item.riskLevelZh || (item.riskLevel === 'high' ? '高风险' : item.riskLevel === 'medium' ? '中风险' : '低风险'),
                       value: Number(item.count)
                     }))
                   }
@@ -468,9 +470,9 @@ const RiskWarning: React.FC = () => {
               onChange={(value) => setRiskFilter(value)}
               options={[
                 { value: 'all', label: '全部风险' },
-                { value: 'low', label: '一般' },
-                { value: 'medium', label: '较重' },
-                { value: 'high', label: '紧急' }
+                { value: 'low', label: '低风险' },
+                { value: 'medium', label: '中风险' },
+                { value: 'high', label: '高风险' }
               ]}
             />
             <Button icon={<ReloadOutlined />} onClick={fetchWarnings}>
@@ -506,8 +508,8 @@ const RiskWarning: React.FC = () => {
           <div>
             <p><strong>老人：</strong>{detailData.elderly?.name}（{detailData.elderly?.age}岁）</p>
             <p><strong>预警类型：</strong>{detailData.warningTypeZh || toWarningTypeZh(detailData.warningType)}</p>
-            <p><strong>风险等级：</strong>{detailData.riskLevel}</p>
-            <p><strong>当前状态：</strong>{detailData.status}</p>
+            <p><strong>风险等级：</strong>{detailData.riskLevelZh || getRiskLevelConfig(detailData.riskLevel).text}</p>
+            <p><strong>当前状态：</strong>{detailData.statusZh || getStatusConfig(detailData.status).text}</p>
             <p><strong>回访时间：</strong>{detailData.followUpAt ? new Date(detailData.followUpAt).toLocaleString() : '未填写'}</p>
             <p><strong>回访结果：</strong>{detailData.followUpResult || '未填写'}</p>
             <div style={{ marginTop: 12 }}>
@@ -516,7 +518,7 @@ const RiskWarning: React.FC = () => {
                 {(detailData.actionLogs || []).map((log: any) => (
                   <li key={log.id}>
                     {new Date(log.createdAt).toLocaleString()} - {log.operator?.realName || '系统'}：
-                    {log.fromStatus || '-'} → {log.toStatus || '-'}
+                    {(log.fromStatus ? getStatusConfig(log.fromStatus).text : '-')} → {(log.toStatus ? getStatusConfig(log.toStatus).text : '-')}
                     {log.notes ? `（备注：${log.notes}）` : ''}
                   </li>
                 ))}

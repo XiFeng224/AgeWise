@@ -8,6 +8,7 @@ type Rule = {
   max?: number
   enum?: Array<string | number | boolean>
   trim?: boolean
+  validator?: (value: any) => boolean
 }
 
 type Schema = Record<string, Rule>
@@ -23,6 +24,7 @@ function checkValue(field: string, value: any, rule: Rule): string | null {
     if (rule.min !== undefined && n < rule.min) return `${field}不能小于${rule.min}`
     if (rule.max !== undefined && n > rule.max) return `${field}不能大于${rule.max}`
     if (rule.enum && !rule.enum.includes(n)) return `${field}取值无效`
+    if (rule.validator && !rule.validator(n)) return `${field}取值无效`
     return null
   }
 
@@ -33,22 +35,30 @@ function checkValue(field: string, value: any, rule: Rule): string | null {
     if (rule.min !== undefined && target.length < rule.min) return `${field}长度不能小于${rule.min}`
     if (rule.max !== undefined && target.length > rule.max) return `${field}长度不能大于${rule.max}`
     if (rule.enum && !rule.enum.includes(target)) return `${field}取值无效`
+    if (rule.validator && !rule.validator(target)) return `${field}取值无效`
     return null
   }
 
   if (rule.type === 'boolean') {
     if (typeof value === 'boolean') {
       if (rule.enum && !rule.enum.includes(value)) return `${field}取值无效`
+      if (rule.validator && !rule.validator(value)) return `${field}取值无效`
       return null
     }
 
     if (value === 'true' || value === 'false' || value === 1 || value === 0 || value === '1' || value === '0') {
       const normalized = value === 'true' || value === 1 || value === '1'
       if (rule.enum && !rule.enum.includes(normalized)) return `${field}取值无效`
+      if (rule.validator && !rule.validator(normalized)) return `${field}取值无效`
       return null
     }
 
     return `${field}必须为布尔值`
+  }
+
+  // 自定义验证器
+  if (rule.validator && !rule.validator(value)) {
+    return `${field}取值无效`
   }
 
   return null

@@ -12,6 +12,12 @@ import { validateParams, validateQuery, validateBody } from '../middleware/valid
 
 const router = Router()
 
+const validRiskLevels = ['low', 'medium', 'high', 'green', 'yellow', 'red', '低', '中', '高', '低风险', '中风险', '高风险'] as const
+const isValidRiskLevelInput = (value: string) => {
+  const normalized = String(value || '').trim().toLowerCase()
+  return validRiskLevels.includes(normalized as (typeof validRiskLevels)[number])
+}
+
 // 所有路由都需要认证
 router.use(authenticate)
 
@@ -56,7 +62,7 @@ router.post('/',
   validateBody({
     elderlyId: { type: 'number', required: true, min: 1 },
     warningType: { type: 'string', required: true, trim: true },
-    riskLevel: { type: 'string', required: true, enum: ['low', 'medium', 'high'], trim: true },
+    riskLevel: { type: 'string', required: true, trim: true, validator: isValidRiskLevelInput },
     title: { type: 'string', required: true, min: 1, max: 200, trim: true },
     description: { type: 'string', required: true, min: 1, max: 1000, trim: true },
     triggerData: { type: 'string', required: false }

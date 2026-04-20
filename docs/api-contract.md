@@ -1,10 +1,12 @@
 # 银龄智护 Agent 平台 API 契约（V1）
 
 > 基础前缀：`/api`
-> 
-> 统一响应约定：
-> - 成功：`{ success: true, data, message?, traceId? }`
-> - 失败：`{ success: false, error, details?, traceId? }`
+
+统一响应：
+- 成功：`{ success: true, data, message?, traceId? }`
+- 失败：`{ success: false, error, details?, traceId? }`
+
+统一错误码建议：`400/401/403/404/409/422/500/504`
 
 ---
 
@@ -12,7 +14,6 @@
 
 ### 1.1 登录
 - `POST /auth/login`
-- Body:
 
 ```json
 {
@@ -21,74 +22,45 @@
 }
 ```
 
-- Success `200`:
-
-```json
-{
-  "success": true,
-  "data": {
-    "accessToken": "...",
-    "refreshToken": "...",
-    "user": {
-      "id": 1,
-      "username": "admin",
-      "role": "admin"
-    }
-  }
-}
-```
-
 ### 1.2 刷新令牌
 - `POST /auth/refresh`
-- Body:
 
-```json
-{
-  "refreshToken": "..."
-}
-```
-
-### 1.3 获取当前用户
+### 1.3 当前用户信息
 - `GET /auth/profile`
-- Header: `Authorization: Bearer <token>`
+- Header: `Authorization: Bearer <accessToken>`
 
 ---
 
 ## 2. 老人 Elderly
 
-### 2.1 获取老人列表
-- `GET /elderly?page=1&limit=200`
-
-### 2.2 获取老人详情
-- `GET /elderly/:id`
-
-### 2.3 创建老人
-- `POST /elderly`
-
-### 2.4 更新老人
-- `PUT /elderly/:id`
-
-### 2.5 删除老人
-- `DELETE /elderly/:id`
+- `GET /elderly`：列表（支持分页）
+- `GET /elderly/:id`：详情
+- `POST /elderly`：创建
+- `PUT /elderly/:id`：更新
+- `DELETE /elderly/:id`：删除
 
 ---
 
-## 3. 预警 Warning（主动预警 Agent）
+## 3. 预警 Warnings
 
-### 3.1 预警列表
+### 3.1 列表
 - `GET /warnings`
-- Query:
+- Query：
   - `page`, `limit`
-  - `status`: `pending|processing|resolved`
-  - `riskLevel`: `low|medium|high`
+  - `status`（`pending|processing|resolved`）
+  - `riskLevel`（兼容中英文多值）
+  - `elderlyName`
   - `startDate`, `endDate`
 
-### 3.2 预警详情
+### 3.2 详情
 - `GET /warnings/:id`
 
-### 3.3 更新预警状态
+### 3.3 创建
+- `POST /warnings`
+- 角色：`admin|manager`
+
+### 3.4 更新状态
 - `PUT /warnings/:id`
-- Body:
 
 ```json
 {
@@ -99,26 +71,28 @@
 }
 ```
 
-### 3.4 预警统计
+### 3.5 统计
 - `GET /warnings/stats/overview`
 - `GET /warnings/stats`
+
+### 3.6 手动触发风险检查
+- `POST /warnings/check/manual`
+- 角色：`admin|manager`
 
 ---
 
 ## 4. 健康 Health
 
-### 4.1 设备健康数据接入
+### 4.1 健康数据接入
 - `POST /health/health-data`
+- `POST /health/health-data/batch`
 
-### 4.2 健康历史
-- `GET /health/health-data/:elderlyId?dataType=heart_rate&days=7`
+### 4.2 健康历史与趋势
+- `GET /health/health-data/:elderlyId`
+- `GET /health/health-data/:elderlyId/trend`
 
-### 4.3 健康趋势
-- `GET /health/health-data/:elderlyId/trend?dataType=blood_pressure&days=30`
-
-### 4.4 主动感知设备接入（门磁/水表/床垫/服务空窗）
+### 4.3 主动感知设备接入
 - `POST /health/proactive/sensor`
-- Body:
 
 ```json
 {
@@ -128,73 +102,23 @@
   "value2": 0,
   "textValue": "",
   "observedAt": "2026-04-18T10:00:00.000Z",
-  "meta": {
-    "source": "simulator"
-  }
+  "meta": { "source": "simulator" }
 }
 ```
 
-- `sensorType` 枚举：
-  - `door_contact`（门磁）
-  - `water_meter`（用水）
-  - `mattress`（床垫）
-  - `activity`（活动异常）
-  - `service_gap`（服务空窗）
+`sensorType`：`door_contact | water_meter | mattress | activity | service_gap`
+
+### 4.4 其他健康能力（同一路由组）
+包含活动轨迹、情绪分析、认知测试、用药依从性、风险预测、报告生成等接口，统一在 `/health/*` 下。
 
 ---
 
-## 5. 风险分析 Risk Analysis（风险分析 Agent）
+## 5. 风险分析 Risk Analysis
 
-### 5.1 获取单老人风险分析报告
+### 5.1 单老人风险报告
 - `GET /risk-analysis/:elderlyId?days=7`
 
-- Success `200` 示例：
-
-```json
-{
-  "success": true,
-  "data": {
-    "elderly": {
-      "id": 1,
-      "name": "张爷爷",
-      "age": 78,
-      "riskLevel": "medium",
-      "healthStatus": "fair",
-      "isAlone": true
-    },
-    "summary": {
-      "riskScore": 76,
-      "riskLevel": "high",
-      "trend": "worsening",
-      "confidence": 84
-    },
-    "analysis": {
-      "healthAbnormalities": [],
-      "activityAbnormalities": [],
-      "warningSignals": [],
-      "serviceGaps": [],
-      "emotionalSignals": [],
-      "cognitiveSignals": []
-    },
-    "recommendations": [
-      {
-        "priority": "high",
-        "timeWindow": "10分钟",
-        "owner": "网格员",
-        "action": "电话确认老人状态",
-        "reason": "先确认是否存在急性异常"
-      }
-    ],
-    "dataSnapshot": {
-      "healthPoints": 20,
-      "activityPoints": 12,
-      "warningCount": 3,
-      "recentNotificationCount": 4,
-      "serviceRequestCount": 1
-    }
-  }
-}
-```
+说明：`days` 取值范围 `1~90`，默认 `7`。
 
 ---
 
@@ -202,7 +126,6 @@
 
 ### 6.1 创建任务
 - `POST /agent-vnext/tasks`
-- Body（核心字段）：
 
 ```json
 {
@@ -211,6 +134,7 @@
   "strategyMode": "balanced",
   "riskLevel": "high",
   "module": "医护",
+  "autoExecute": true,
   "modelPreference": "auto",
   "sourceQuery": "",
   "sourceAnswer": "",
@@ -219,16 +143,23 @@
 }
 ```
 
+字段说明：
+- `strategyMode`: `conservative|balanced|aggressive`
+- `riskLevel`: `low|medium|high`
+- `module`: `护理|医护|后勤|收费|接待`
+- `modelPreference`: `auto|qwen|deepseek|rule`
+
 ### 6.2 获取任务快照
 - `GET /agent-vnext/tasks/:taskId`
 
 ### 6.3 SSE 事件流
 - `GET /agent-vnext/tasks/:taskId/events?token=<accessToken>`
-- 返回：`text/event-stream`
+- Content-Type：`text/event-stream`
 - 典型事件：
   - `TASK_CREATED`
   - `TASK_PLANNING`
   - `TASK_PLANNED`
+  - `TASK_PENDING_APPROVAL`
   - `TASK_EXECUTING`
   - `TASK_TRACKING`
   - `TASK_DONE`
@@ -237,60 +168,55 @@
 
 ### 6.4 审批执行
 - `POST /agent-vnext/tasks/:taskId/approve`
+- 角色：`admin|manager`
 
 ### 6.5 驳回任务
 - `POST /agent-vnext/tasks/:taskId/reject`
+- 角色：`admin|manager`
 
-### 6.6 周策略更新
-- `POST /agent-vnext/policy/weekly-update`
+### 6.6 上下文快照
+- `GET /agent-vnext/context/:elderlyId`
 
-### 6.7 仅规划（不落地任务）
+### 6.7 仅规划
 - `POST /agent-vnext/plan`
-- 额外字段约定：
-  - `modelPreference`: `auto|qwen|deepseek|rule`
-  - `sourceQuery`: `string`
-  - `sourceAnswer`: `string`
-  - `sourceSuggestedAction`: `string[]`（最多20条，非字符串会被过滤）
-  - `riskAnalysis`: `object|null`
 
-### 6.8 自主决策执行
+### 6.8 工具执行
+- `POST /agent-vnext/tools/execute`
+- 角色：`admin|manager`
+
+### 6.9 自主决策
 - `POST /agent-vnext/autonomous`
-- 额外字段约定：
-  - `autoExecute`: `boolean`（默认 `true`）
-  - `modelPreference`: `auto|qwen|deepseek|rule`
-  - `sourceQuery`: `string`
-  - `sourceAnswer`: `string`
-  - `sourceSuggestedAction`: `string[]`（最多20条，非字符串会被过滤）
-  - `riskAnalysis`: `object|null`
+- 角色：`admin|manager`
+
+### 6.10 结果追踪
+- `POST /agent-vnext/outcome`
+
+### 6.11 周策略更新
+- `POST /agent-vnext/policy/weekly-update`
+- 角色：`admin`
 
 ---
 
-## 7. 错误码建议（统一）
+## 7. 统计与系统
 
-- `400` 参数错误/校验失败
-- `401` 未登录或 token 失效
-- `403` 权限不足
-- `404` 资源不存在
-- `409` 状态冲突（如不可审批状态）
-- `422` 业务规则不满足
-- `500` 服务器内部错误
-- `504` 上游/处理超时
+- `GET /statistics/overview`
+- `GET /statistics/elderly`
+- `GET /statistics/services`
+- `GET /system/*`（系统状态与辅助接口）
 
 ---
 
 ## 8. 前端对接建议
 
-1. 所有请求通过 `axiosInstance`（统一鉴权与错误处理）
-2. SSE 失败保留轮询兜底（已实现）
-3. 对 `401` 做统一跳转登录
-4. 对网络断连/超时做明确提示，不与业务错误混淆
+1. 统一走 `axiosInstance`（鉴权、错误处理、401 跳转）；
+2. SSE 断连后建议重连并保留轮询兜底；
+3. 对 `traceId` 做日志透传，便于联调排障；
+4. Agent 相关请求需处理超时与限流提示。
 
 ---
 
-## 9. 版本化建议
+## 9. 版本建议
 
-- 当前版本：`V1`（无显式 URI version）
-- 后续建议：
-  - 新增 `/api/v2` 逐步迁移
-  - 关键契约字段保持向后兼容
-  - 为风险分析与Agent任务新增 schema 校验（zod/joi）
+- 当前为 V1（无显式 URI version）；
+- 后续可通过 `/api/v2` 逐步演进；
+- 建议对高价值接口补充 schema 校验（zod/joi）与示例响应。

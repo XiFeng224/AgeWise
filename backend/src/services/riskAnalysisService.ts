@@ -9,12 +9,14 @@ export interface RiskAnalysisResult {
     name: string
     age: number
     riskLevel: 'low' | 'medium' | 'high'
+    riskLevelZh: '低风险' | '中风险' | '高风险'
     healthStatus: string
     isAlone: boolean
   }
   summary: {
     riskScore: number
     riskLevel: 'low' | 'medium' | 'high'
+    riskLevelZh: '低风险' | '中风险' | '高风险'
     trend: 'improving' | 'stable' | 'worsening'
     confidence: number
   }
@@ -45,6 +47,12 @@ export interface RiskAnalysisResult {
 }
 
 class RiskAnalysisService {
+  private getRiskLevelZh(level: 'low' | 'medium' | 'high'): '低风险' | '中风险' | '高风险' {
+    if (level === 'high') return '高风险'
+    if (level === 'medium') return '中风险'
+    return '低风险'
+  }
+
   private getChineseHealthType(type: string) {
     const map: Record<string, string> = {
       heart_rate: '心率',
@@ -181,18 +189,22 @@ class RiskAnalysisService {
       })
     }
 
+    const elderlyRiskLevel = elderly.riskLevel as 'low' | 'medium' | 'high'
+
     return {
       elderly: {
         id: elderly.id,
         name: elderly.name,
         age: elderly.age,
-        riskLevel: elderly.riskLevel as 'low' | 'medium' | 'high',
+        riskLevel: elderlyRiskLevel,
+        riskLevelZh: this.getRiskLevelZh(elderlyRiskLevel),
         healthStatus: elderly.healthStatus,
         isAlone: elderly.isAlone
       },
       summary: {
         riskScore,
         riskLevel,
+        riskLevelZh: this.getRiskLevelZh(riskLevel),
         trend,
         confidence
       },

@@ -1,239 +1,157 @@
-# Agent 平台模块说明
+# Agent 平台模块说明（VNext）
 
-## 1. 模块概述
+## 1. 模块定位
 
-Agent 平台是社区养老数据查询与风险预警系统的核心智能引擎，提供了基于大模型的智能决策、任务编排和风险分析能力。该平台整合了后端的业务逻辑和前端的用户交互，为养老服务提供智能化支持。
+Agent 平台是本项目的执行核心，负责把“问题分析”转为“任务闭环”。
 
-## 2. 架构设计
+在养老场景中，它承担三件事：
 
-### 2.1 分层架构
+1. 生成可执行计划（Plan）；
+2. 驱动执行流程（Auto/Approve）；
+3. 追踪并回写结果（Outcome）。
 
-- **前端层**：Agent 相关页面组件
-- **后端层**：Agent 服务和路由
-- **Agent服务层**：Python 智能Agent
-- **数据层**：数据库和缓存
+---
 
-### 2.2 核心组件
+## 2. 代码位置
 
-| 组件 | 职责 | 位置 |
-|------|------|------|
-| AgentVNextService | 任务规划、执行和追踪 | backend/src/services/agentVNextService.ts |
-| AgentOrchestratorService | 服务编排和调度 | backend/src/services/agentOrchestratorService.ts |
-| AIAgentService | 大模型接口和智能分析 | backend/src/services/aiAgentService.ts |
-| AgentVNextRoutes | API 路由定义 | backend/src/routes/agentVNextRoutes.ts |
-| AgentVNext.tsx | 前端运行台界面 | frontend/src/pages/AgentVNext.tsx |
-| Python Agent | 自然语言处理和分析 | agent-service/ |
+### 后端核心
+- `backend/src/routes/agentVNextRoutes.ts`
+- `backend/src/services/agentVNextService.ts`
+- `backend/src/services/agentOrchestratorService.ts`
+- `backend/src/services/aiAgentService.ts`
 
-## 3. 核心功能
+### 前端核心
+- `frontend/src/pages/AgentVNext.tsx`
+- `frontend/src/pages/AgentCommandCenter.tsx`
+- `frontend/src/pages/DataQuery.tsx`（上游上下文来源）
 
-### 3.1 任务规划与执行
+---
 
-- **任务创建**：接收前端任务请求，生成任务ID和初始状态
-- **智能规划**：基于大模型分析，生成任务执行计划
-- **工具调用**：执行各种工具操作，如派单、通知等
-- **任务追踪**：实时跟踪任务执行状态和结果
-- **结果回写**：记录任务执行结果，形成闭环
+## 3. 核心能力
 
-### 3.2 风险分析与预警
+### 3.1 任务生命周期管理
+任务状态：
 
-- **健康数据分析**：分析老人健康数据，识别异常
-- **风险评估**：基于多维度数据评估风险等级
-- **预警触发**：当风险超过阈值时触发预警
-- **预警处理**：自动生成预警处置方案
+- `queued`
+- `planning`
+- `pending_approval`
+- `executing`
+- `tracking`
+- `done`
+- `failed`
+- `rejected`
 
-### 3.3 智能问答与分析
+支持从任务创建到完成闭环的全过程跟踪。
 
-- **自然语言理解**：理解用户的自然语言查询
-- **SQL生成**：将自然语言转换为SQL查询
-- **数据可视化**：生成适合的图表类型
-- **报表生成**：自动生成各类分析报表
+### 3.2 智能规划（Plan）
+输入老人、事件、风险、模块、模型偏好等上下文，输出规划摘要和执行建议。
 
-### 3.4 策略管理
+### 3.3 自主执行（Autonomous）
+在允许自动执行时，系统可自动调用执行链路并返回执行轨迹。
 
-- **策略配置**：根据不同场景配置不同策略
-- **策略更新**：基于历史数据自动调整策略
-- **策略快照**：定期保存策略状态，支持回滚
+### 3.4 人工审批（Approve/Reject）
+当任务处于 `pending_approval`，管理员或经理可审批执行或驳回。
 
-## 4. 技术实现
+### 3.5 事件流推送（SSE）
+通过 `text/event-stream` 推送任务进度，支持前端实时渲染执行阶段。
 
-### 4.1 后端实现
+### 3.6 结果追踪（Outcome）
+执行结束后记录跟踪结果，支持闭环指标沉淀（满意度、复发、逾期等）。
 
-- **Node.js + TypeScript**：强类型安全，提高代码质量
-- **Express**：轻量高效的Web框架
-- **Sequelize**：ORM框架，简化数据库操作
-- **JWT**：无状态认证，便于水平扩展
-- **Redis**：缓存和会话管理
+---
 
-### 4.2 前端实现
+## 4. API 能力清单
 
-- **React + TypeScript**：组件化开发，类型安全
-- **Ant Design**：美观实用的UI组件库
-- **Vite**：快速的构建工具
-- **React Router**：路由管理
-- **Axios**：HTTP客户端
+基础前缀：`/api/agent-vnext`
 
-### 4.3 Agent服务实现
+- `POST /tasks`：创建任务（可自动执行）
+- `GET /tasks/:taskId`：查询任务快照
+- `GET /tasks/:taskId/events`：订阅任务 SSE 事件流
+- `POST /tasks/:taskId/approve`：审批并执行任务
+- `POST /tasks/:taskId/reject`：驳回任务
+- `GET /context/:elderlyId`：上下文快照
+- `POST /plan`：只规划不落地任务
+- `POST /tools/execute`：批量工具执行
+- `POST /autonomous`：自主决策执行
+- `POST /outcome`：结果追踪记录
+- `POST /policy/weekly-update`：周策略更新（admin）
 
-- **Python + FastAPI**：高性能API服务
-- **大模型集成**：阿里云百炼等大模型
-- **NLP处理**：自然语言理解和生成
-- **SQL生成**：智能SQL查询生成
-- **风险分析**：基于规则和模型的风险评估
+详细字段见 `docs/api-contract.md`。
 
-## 5. API接口
+---
 
-### 5.1 任务管理接口
+## 5. 权限模型（关键）
 
-- **POST /api/agent-vnext/tasks**：创建任务
-- **POST /api/agent-vnext/tasks/:taskId/approve**：批准任务执行
-- **POST /api/agent-vnext/tasks/:taskId/reject**：驳回任务
-- **GET /api/agent-vnext/tasks/:taskId**：获取任务详情
-- **GET /api/agent-vnext/tasks/:taskId/events**：获取任务事件流
+- 创建任务 / 查询任务：登录用户
+- 审批 / 驳回 / 自主执行 / 工具执行：`admin` 或 `manager`
+- 周策略更新：`admin`
 
-### 5.2 工具执行接口
+---
 
-- **POST /api/agent-vnext/tools/execute**：执行工具调用
+## 6. 上下文贯通设计
 
-### 5.3 策略管理接口
+运行台支持接收以下上游信息：
 
-- **POST /api/agent-vnext/policy/weekly-update**：每周策略更新
+- `sourceQuery`：来源问题
+- `sourceAnswer`：来源回答
+- `sourceSuggestedAction`：建议动作数组
+- `riskAnalysis`：风险分析对象
+- `traceId`：请求链路追踪
 
-### 5.4 上下文管理接口
+这保证了问答、预警、运行台之间的连续性。
 
-- **GET /api/agent-vnext/context/:elderlyId**：获取老人上下文快照
+---
 
-### 5.5 规划接口
+## 7. 典型流程
 
-- **POST /api/agent-vnext/plan**：生成任务规划
+### 流程 A：自动执行
+1. `POST /tasks`（`autoExecute=true`）
+2. 系统规划完成后进入 `executing`
+3. 自动执行并进入 `tracking`
+4. 记录 outcome，任务 `done`
 
-### 5.6 自主决策接口
+### 流程 B：审批执行
+1. `POST /tasks`（`autoExecute=false`）
+2. 状态进入 `pending_approval`
+3. 管理员调用 `POST /tasks/:taskId/approve`
+4. 系统执行并回写 outcome
 
-- **POST /api/agent-vnext/autonomous**：自主决策执行
+### 流程 C：驳回
+1. 任务处于 `pending_approval`
+2. 管理员调用 `POST /tasks/:taskId/reject`
+3. 状态更新为 `rejected`
 
-### 5.7 结果追踪接口
+---
 
-- **POST /api/agent-vnext/outcome**：记录任务结果
+## 8. 与业务模块协同
 
-## 6. 前端界面
+- `DataQuery`：提供问题语义和升级入口
+- `RiskWarning`：提供预警驱动的任务来源
+- `RiskAnalysis`：提供风险结构化输入
+- `AgentCommandCenter`：承接结果统计和治理视图
 
-### 6.1 Agent 运行台
+---
 
-- **任务创建**：填写任务信息，选择策略和模块
-- **任务规划**：查看智能生成的任务计划
-- **任务执行**：批准或驳回任务，查看执行状态
-- **事件流**：实时查看任务执行事件
-- **历史记录**：查看历史任务记录
+## 9. 稳定性设计
 
-### 6.2 Agent 工作台
+- 路由级超时保护（withTimeout）
+- Agent 接口单独限流（`/api/agent-vnext`）
+- 参数校验与错误码规范
+- SSE 心跳维持与断链清理
 
-- **智能问答**：自然语言查询系统
-- **数据分析**：数据可视化和分析
-- **报表生成**：自动生成各类报表
+---
 
-### 6.3 Agent 命令中心
+## 10. 演示建议
 
-- **命令执行**：执行各类Agent命令
-- **状态监控**：监控Agent服务状态
-- **配置管理**：管理Agent配置
+建议用一条真实场景串联：
 
-## 7. 工作流程
+1. 在 `DataQuery` 提问高风险问题；
+2. 升级到 `AgentVNext` 创建任务；
+3. 展示 SSE 事件流；
+4. 在 `AgentCommandCenter` 展示闭环指标变化。
 
-### 7.1 任务执行流程
+---
 
-1. **任务创建**：前端填写任务信息，发送到后端
-2. **任务规划**：后端调用大模型生成执行计划
-3. **计划审批**：前端查看计划，批准或驳回
-4. **任务执行**：后端执行工具操作，如派单、通知等
-5. **状态追踪**：前端实时查看执行状态
-6. **结果记录**：后端记录执行结果，形成闭环
+## 11. 小结
 
-### 7.2 风险处理流程
-
-1. **数据接入**：健康数据接入系统
-2. **风险分析**：Agent分析数据，评估风险
-3. **预警生成**：当风险超过阈值时生成预警
-4. **任务创建**：自动创建风险处置任务
-5. **任务执行**：按照计划执行处置措施
-6. **结果追踪**：记录处置结果，评估效果
-
-## 8. 配置与部署
-
-### 8.1 环境配置
-
-- **后端配置**：
-  - 数据库连接：`DATABASE_URL`
-  - JWT密钥：`JWT_SECRET`
-  - Redis连接：`REDIS_URL`
-  - 大模型API密钥：`QWEN_API_KEY`等
-
-- **前端配置**：
-  - API基础地址：`VITE_API_BASE_URL`
-  - 代理目标：`VITE_PROXY_TARGET`
-
-- **Agent服务配置**：
-  - 大模型API密钥：`BAILIAN_API_KEY`
-  - 数据库连接：`DATABASE_URL`
-
-### 8.2 部署步骤
-
-1. **环境准备**：安装Node.js、Python、MySQL、Redis
-2. **依赖安装**：
-   - 后端：`npm install`
-   - 前端：`npm install`
-   - Agent服务：`pip install -r requirements.txt`
-3. **数据库初始化**：执行`database/init.sql`
-4. **服务启动**：
-   - 后端：`npm run dev`
-   - 前端：`npm run dev`
-   - Agent服务：`python main.py`
-
-## 9. 监控与维护
-
-### 9.1 日志管理
-
-- **后端日志**：应用日志和错误日志
-- **前端日志**：浏览器控制台日志
-- **Agent服务日志**：Python应用日志
-
-### 9.2 健康检查
-
-- **后端健康检查**：`/api/system/health`
-- **Agent服务健康检查**：`/health`
-- **大模型健康检查**：`/health/llm`
-
-### 9.3 常见问题
-
-| 问题 | 可能原因 | 解决方案 |
-|------|----------|----------|
-| 任务创建失败 | 参数错误 | 检查参数格式和必填项 |
-| 大模型调用失败 | API密钥错误 | 检查API密钥配置 |
-| 工具执行失败 | 权限不足 | 检查用户权限 |
-| 数据库连接失败 | 连接配置错误 | 检查数据库连接字符串 |
-| Redis连接失败 | 服务未启动 | 启动Redis服务 |
-
-## 10. 扩展与未来规划
-
-### 10.1 功能扩展
-
-- **多模型支持**：集成更多大模型
-- **自定义工具**：支持用户自定义工具
-- **多语言支持**：支持多语言交互
-- **移动端适配**：开发移动端Agent界面
-
-### 10.2 性能优化
-
-- **模型缓存**：缓存模型结果，提高响应速度
-- **异步处理**：使用消息队列处理异步任务
-- **负载均衡**：支持多实例部署
-
-### 10.3 智能提升
-
-- **强化学习**：基于反馈优化决策
-- **知识图谱**：构建养老领域知识图谱
-- **联邦学习**：保护隐私的分布式学习
-
-## 11. 总结
-
-Agent 平台是社区养老数据查询与风险预警系统的核心智能引擎，通过整合大模型能力和业务逻辑，为养老服务提供了智能化、自动化的支持。该平台不仅提高了服务效率，也提升了服务质量，为社区养老事业的发展提供了有力的技术支撑。
-
-未来，随着大模型技术的不断发展和养老服务需求的不断变化，Agent 平台将持续进化，为养老服务提供更加智能、更加个性化的支持。
+Agent 平台的价值不在“回答问题”本身，而在“推动问题被处理并可追踪地完成闭环”。这是本项目区别于传统查询系统和纯聊天系统的核心。

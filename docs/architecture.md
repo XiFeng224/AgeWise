@@ -1,163 +1,165 @@
-# 社区养老数据查询与风险预警系统架构图
+# 银龄智护 Agent 平台架构说明
 
-## 系统架构概述
+## 1. 架构目标
 
-本系统采用分层架构设计，将前端展示、后端业务逻辑、智能Agent能力和数据存储分离，实现了高内聚、低耦合的系统结构。
+系统围绕社区养老的真实处理链路设计：
 
-## 架构分层
+- 从“信息查询”升级为“问题理解 + 任务执行”；
+- 从“单模块处理”升级为“跨模块联动”；
+- 从“结果分散”升级为“治理视角统一闭环”。
 
-### 1. 前端层
-- **技术栈**：React + TypeScript + Ant Design + Vite
-- **主要职责**：
-  - 用户界面展示
-  - 交互逻辑处理
-  - 数据可视化
-  - 路由管理
-  - 状态管理
-- **核心组件**：
-  - 布局组件（Layout、Sidebar）
-  - 页面组件（Dashboard、ElderlyManagement、RiskWarning等）
-  - 工具组件（axiosInstance）
-- **访问方式**：http://localhost:3000
+---
 
-### 2. 后端层
-- **技术栈**：Node.js + Express + TypeScript + Sequelize
-- **主要职责**：
-  - API接口处理
-  - 业务逻辑编排
-  - 认证授权
-  - 预警管理
-  - 任务闭环
-  - 数据持久化
-- **核心模块**：
-  - 控制器（Controllers）：处理HTTP请求
-  - 服务（Services）：实现业务逻辑
-  - 中间件（Middleware）：认证、错误处理等
-  - 路由（Routes）：API路由定义
-  - 模型（Models）：数据库模型
-- **访问方式**：http://localhost:8003/api
+## 2. 总体架构
 
-### 3. Agent服务层
-- **技术栈**：Python + FastAPI + 大模型（阿里云百炼）
-- **主要职责**：
-  - 自然语言处理
-  - 模型推理
-  - 风险分析
-  - 报表生成
-  - SQL查询生成
-- **核心Agent**：
-  - NLP Agent：自然语言理解
-  - SQL Agent：SQL查询生成与执行
-  - Risk Agent：风险分析与预警
-  - Report Agent：报表生成
-- **访问方式**：http://localhost:8001
+```text
+前端管理端（React + TS + Ant Design + ECharts）
+                │ HTTP / SSE / WebSocket
+                ▼
+后端 API 网关（Express + TS）
+  ├─ 鉴权与权限（JWT + RBAC）
+  ├─ 校验与限流（validate + rateLimit）
+  ├─ 请求上下文（traceId）
+  ├─ 业务路由（elderly / warnings / health / query / agent-vnext ...）
+  └─ Agent 任务编排与执行
+                │
+                ├──────────────► MySQL（业务数据）
+                ├──────────────► Redis（缓存/令牌黑名单，可选）
+                └──────────────► 外部模型服务（qwen / deepseek / rule / python agent）
+```
 
-### 4. 数据层
-- **技术栈**：MySQL
-- **主要职责**：
-  - 数据持久化
-  - 数据查询
-  - 事务管理
-- **核心表结构**：
-  - users：用户信息
-  - elderly：老人信息
-  - health_data：健康数据
-  - warnings：预警信息
-  - service_requests：服务请求
-  - notifications：通知信息
-- **访问方式**：通过Sequelize ORM访问
+---
 
-### 5. 缓存层
-- **技术栈**：Redis
-- **主要职责**：
-  - 令牌黑名单
-  - 临时数据缓存
-  - 会话管理
-- **访问方式**：通过cacheService访问
+## 3. 前端层
 
-## 数据流与通信
+### 3.1 技术栈
+- React 18 + TypeScript + Vite
+- Ant Design + ECharts
+- React Router
 
-### 前端 → 后端
-- **通信方式**：HTTP RESTful API
-- **认证方式**：JWT Token
-- **数据格式**：JSON
+### 3.2 主要页面
+- `Dashboard`：平台总览与入口
+- `DataQuery`：智能问答与升级任务入口
+- `RiskWarning`：预警管理与处置
+- `RiskAnalysis`：单老人风险分析
+- `ElderlyManagement`：老人档案管理
+- `HealthRecords`：健康记录与异常联动
+- `Notifications`：通知管理
+- `AgentVNext`：运行台（任务全流程）
+- `AgentCommandCenter`：治理看板
 
-### 后端 → Agent服务
-- **通信方式**：HTTP API
-- **调用时机**：需要自然语言处理、风险分析等智能能力时
-- **数据格式**：JSON
+### 3.3 前端通信模式
+- 普通查询：REST API
+- 任务执行进度：SSE（`/api/agent-vnext/tasks/:taskId/events`）
+- 实时消息能力：WebSocket（`/ws`）
 
-### 后端 → 数据库
-- **通信方式**：Sequelize ORM
-- **操作类型**：CRUD操作
-- **事务管理**：Sequelize事务
+---
 
-### 后端 → 缓存
-- **通信方式**：Redis客户端
-- **使用场景**：令牌管理、临时数据
+## 4. 后端层
 
-## 核心业务流程
+### 4.1 技术栈
+- Node.js + Express + TypeScript
+- Sequelize ORM
+- JWT 鉴权 + RBAC
 
-### 1. 用户登录流程
-1. 前端发送登录请求
-2. 后端验证账号密码
-3. 生成JWT Token
-4. 返回Token给前端
-5. 前端存储Token并用于后续请求
+### 4.2 核心中间件
+- `auth`：鉴权与角色授权
+- `validate`：参数/Body/Query 校验
+- `requestContext`：traceId 注入
+- `rateLimit`：全局与 Agent 路由限流
+- `errorHandler`：统一异常处理
 
-### 2. 风险预警流程
-1. 健康数据接入
-2. 后端分析数据
-3. 触发预警
-4. 通知相关人员
-5. 生成服务请求
+### 4.3 核心路由分组（`/api`）
+- `/auth`：登录、refresh、profile
+- `/elderly`：老人档案 CRUD
+- `/warnings`：预警查询、处置、统计
+- `/health`：健康数据接入、趋势、主动感知
+- `/query`：自然语言查询
+- `/notifications`：通知中心
+- `/risk-analysis`：单老人风险分析
+- `/agent-vnext`：任务运行台能力
+- `/statistics`、`/system`、`/agent`、`/ai-agent`
 
-### 3. Agent任务执行流程
-1. 前端创建任务
-2. 后端进行任务规划
-3. 调用Agent服务进行智能分析
-4. 执行工具操作
-5. 记录执行结果
-6. 生成任务闭环
+---
 
-## 系统扩展点
+## 5. Agent 执行架构
 
-1. **微服务化**：将Agent服务独立部署
-2. **消息队列**：引入消息队列处理异步任务
-3. **监控系统**：添加系统监控和日志分析
-4. **多租户支持**：扩展为多机构使用
-5. **移动端适配**：开发移动端应用
+### 5.1 运行台任务状态机
+`queued -> planning -> pending_approval -> executing -> tracking -> done`
 
-## 技术选型理由
+失败或中断状态：`failed`、`rejected`
 
-- **前端**：React + TypeScript 提供了良好的类型安全和组件复用
-- **后端**：Node.js + Express 轻量高效，适合API服务
-- **Agent**：Python 生态丰富，适合AI相关任务
-- **数据库**：MySQL 稳定可靠，适合关系型数据存储
-- **缓存**：Redis 高性能，适合缓存和会话管理
+### 5.2 关键能力
+- **plan**：生成任务规划与执行建议
+- **autonomous**：自主决策并执行工具链
+- **tools/execute**：工具批量执行
+- **outcome**：结果追踪与回写
+- **events(SSE)**：实时事件流推送
 
-## 部署架构
+### 5.3 事件示例
+- `TASK_CREATED`
+- `TASK_PLANNING`
+- `TASK_PLANNED`
+- `TASK_PENDING_APPROVAL`
+- `TASK_EXECUTING`
+- `TASK_TRACKING`
+- `TASK_DONE`
+- `TASK_FAILED`
+- `TASK_REJECTED`
 
-- **开发环境**：本地开发，前端和后端分别运行
-- **测试环境**：独立测试服务器
-- **生产环境**：容器化部署，负载均衡
+---
 
-## 安全考虑
+## 6. 数据层
 
-- **认证授权**：JWT Token + 角色权限控制
-- **数据加密**：敏感数据加密存储
-- **输入验证**：严格的参数校验
-- **防注入**：SQL注入防护
-- **限速**：API请求限速
-- **CORS**：跨域资源共享配置
+### 6.1 MySQL
+承载老人档案、健康数据、预警、服务请求、通知、用户等核心业务数据。
 
-## 监控与维护
+### 6.2 Redis（可选）
+用于缓存、令牌黑名单与临时会话数据。
 
-- **日志系统**：结构化日志
-- **健康检查**：系统健康状态监控
-- **错误跟踪**：错误捕获与分析
-- **性能监控**：API响应时间监控
+---
 
-## 总结
+## 7. 关键业务流
 
-本架构设计实现了一个现代化、可扩展的社区养老数据查询与风险预警系统，通过分层设计和职责分离，确保了系统的可维护性和可扩展性。同时，结合智能Agent技术，为养老服务提供了更智能、更高效的支持。
+### 7.1 问答升级任务流
+1. 用户在 `DataQuery` 提问；
+2. 后端返回 answer + 建议动作；
+3. 若识别为需处置场景，跳转 `AgentVNext`；
+4. 运行台创建任务并规划；
+5. 自动执行或审批后执行；
+6. 通过 SSE 回传过程；
+7. `AgentCommandCenter` 汇总治理指标。
+
+### 7.2 预警处置流
+1. 预警由健康数据或主动感知触发；
+2. 用户在 `RiskWarning` 查看并处理；
+3. 可一键进入问答或运行台；
+4. 处置结果回写并计入统计。
+
+---
+
+## 8. 安全与可观测性
+
+- JWT + 角色权限
+- 参数校验与统一错误响应
+- 路由级限流（尤其是 Agent 相关接口）
+- traceId 贯穿请求、执行、回写链路
+- 健康检查端点：`GET /health`
+- API 摘要端点：`GET /api/docs`
+
+---
+
+## 9. 部署形态
+
+- 开发环境：前后端分离本地启动
+- 演示环境：局域网/单机部署
+- 生产扩展方向：
+  - Nginx 反向代理
+  - 容器化部署
+  - Agent 能力独立服务化
+
+---
+
+## 10. 小结
+
+本架构将养老业务中的“问答、预警、任务执行、治理分析”解耦为清晰分层，并通过统一上下文与事件机制完成贯通，兼顾了演示效果、工程可维护性和后续扩展空间。

@@ -1,131 +1,93 @@
 # 银龄智护 Agent 平台
 
-## 1. 项目定位
-
-本项目面向社区养老场景，构建一个集 **智能问答、风险预警、任务路由、执行编排与闭环治理** 于一体的 Agent 平台。系统围绕老人管理、健康档案、预警处置、通知联动与任务追踪展开，帮助基层工作人员把“发现问题”升级为“处理问题并闭环”。
-
-项目核心目标：
-- 让问题先被理解，再进入处理
-- 让问答结果可以自动升级为任务
-- 让任务从创建、审批、执行到追踪形成闭环
-- 让管理者从分散模块走向统一治理视角
+面向社区养老场景的智能化业务平台，围绕 **“先理解问题，再升级任务，再执行闭环”** 设计，打通智能问答、风险预警、任务运行和治理看板。
 
 ---
 
-## 2. 方案特点与创新点
+## 1. 项目简介
 
-### 2.1 Agent 场景创新
-- 将 Agent 能力落到真实的养老业务流程中，而不是停留在通用聊天。
-- 支持“先回答、再判断、再升级”的任务路由模式。
-- 问答页、运行台、指挥中心之间共享上下文与 traceId，支持任务连续处理。
+银龄智护 Agent 平台不是单一查询系统，也不是通用聊天机器人，而是一个面向养老业务的执行型平台：
 
-### 2.2 业务联动创新
-- 智能问答、风险预警、老人管理、健康档案、通知中心均可直接联动运行台。
-- 预警不再只是提示信息，而是可直接进入处置链路。
-- 健康档案与实时监测支持生成通俗建议，并可进入任务流。
-
-### 2.3 工程化创新
-- 前后端分离，模块化组织。
-- 支持动态主题的蓝色水墨视觉风格。
-- 统一使用平台导航与上下文传递，提升可维护性与展示效果。
+- 问答：支持自然语言提问，优先给出解释性回答；
+- 路由：当问题涉及风险或处置时，可升级为任务；
+- 执行：运行台完成规划、审批/自动执行、结果追踪；
+- 治理：指挥中心统一查看来源、效率与闭环情况。
 
 ---
 
-## 3. 技术架构
+## 2. 技术栈
 
-```text
-前端管理端（React + TypeScript + Ant Design + ECharts）
-          │
-          ▼
-后端 API（Node.js + Express + TypeScript）
-          │
- ┌────────┴────────┐
- ▼                 ▼
-业务数据库         Agent 路由/执行服务
-          │
-          ▼
-运行台任务闭环（规划 → 审批 → 执行 → 追踪）
-```
+### 前端
+- React 18 + TypeScript
+- Vite
+- Ant Design
+- ECharts
+- React Router
 
-### 技术栈
-- 前端：React 18、TypeScript、Vite、Ant Design、ECharts、React Router
-- 后端：Node.js、Express、TypeScript、Sequelize
-- AI：千问 / DeepSeek / Python NLP Agent / 本地规则兜底
-- 数据：MySQL
+### 后端
+- Node.js + Express + TypeScript
+- Sequelize
+- MySQL
+- JWT 鉴权
+- SSE 事件流
+- WebSocket（`/ws`）
+
+### AI / Agent
+- 多模型路由（`auto | qwen | deepseek | rule`）
+- 任务规划 / 自主决策 / 工具执行 / 结果回写
+- Python Agent（可选）
 
 ---
 
-## 4. 项目目录结构
+## 3. 当前项目结构
 
 ```text
 项目三/
-├─ backend/                 # 后端服务
-├─ frontend/                # 前端管理端
-├─ agent-service/           # Python NLP Agent（如启用）
-├─ docs/
-│  └─ paper.md              # 论文/项目说明
-├─ README.md                # 项目总说明
-├─ PROJECT_SUMMARY.md       # 项目总结
-├─ DEPLOYMENT.md            # 部署说明
-└─ DEMO_SCRIPT.md           # 演示脚本
+├─ backend/                      # 后端服务（Express + TS）
+│  ├─ src/
+│  │  ├─ routes/                 # 路由（auth/elderly/warnings/agent-vnext...）
+│  │  ├─ controllers/            # 控制器
+│  │  ├─ services/               # 业务服务与 Agent 能力
+│  │  ├─ middleware/             # 认证、校验、限流、上下文
+│  │  ├─ models/                 # Sequelize 模型
+│  │  └─ scripts/                # 数据种子脚本
+├─ frontend/                     # 前端管理端（React + TS）
+│  └─ src/
+│     ├─ pages/                  # 页面模块
+│     ├─ components/             # 公共组件
+│     └─ utils/                  # axios 实例等
+├─ docs/                         # 详细文档（架构、API、Agent 平台说明）
+├─ DATA_SEED_GUIDE.md            # 数据增强指南
+├─ DEPLOYMENT.md                 # 部署指南
+├─ DEMO_SCRIPT.md                # 演示脚本
+├─ OPERATION_FLOW.md             # 操作流程与联动说明
+└─ PROJECT_SUMMARY.md            # 项目总结
 ```
 
 ---
 
-## 5. 核心模块
+## 4. 主要页面与能力
 
-### 5.1 首页 `Dashboard`
-- 平台门户与入口说明
-- 展示 Agent 闭环概览
-- 快速进入运行台、指挥中心、统计分析
-
-### 5.2 智能问答 `DataQuery`
-- 支持自然语言提问
-- 先返回自然语言回答，再判断是否升级任务
-- 展示最近会话、traceId、建议动作
-- 支持一键跳转运行台或指挥中心
-
-### 5.3 风险预警 `RiskWarning`
-- 预警列表、趋势、风险分布、处理轨迹
-- 预警详情与处置表单
-- 可直接联动问答页或运行台
-
-### 5.4 老人管理 `ElderlyManagement`
-- 老人基础信息增删改查
-- 风险、健康筛选
-- 支持直接问 Agent / 生成任务
-
-### 5.5 健康档案 `HealthRecords`
-- 健康档案管理
-- 实时监测数据录入
-- 通俗健康建议与知识展示
-- 支持语音播报与联动处置
-
-### 5.6 通知中心 `Notifications`
-- 通知列表、已读管理、删除
-- 支持直达运行台与指挥中心
-
-### 5.7 任务运行台 `AgentVNext`
-- 接收问答上下文与来源信息
-- 创建任务、规划任务、审批执行
-- SSE 事件流追踪与结果回写
-
-### 5.8 指挥中心 `AgentCommandCenter`
-- 任务总量、SLA、闭环率、服务完成率
-- 任务来源统计与模块统计
-- 风险热力列表
+- `Dashboard`：平台入口与概览
+- `DataQuery`：智能问答与任务升级入口
+- `RiskWarning`：风险预警列表、统计、处置
+- `RiskAnalysis`：单老人风险分析报告
+- `ElderlyManagement`：老人信息管理与联动
+- `HealthRecords`：健康数据、建议与异常联动
+- `Notifications`：通知管理与快速跳转
+- `AgentVNext`：任务运行台（创建、规划、审批/执行、追踪）
+- `AgentCommandCenter`：治理总览（SLA、闭环率、来源统计）
 
 ---
 
-## 6. 运行说明
+## 5. 快速启动
 
-### 6.1 环境要求
+### 5.1 环境要求
 - Node.js 18+
 - MySQL 8+
-- Python 3.8+（如使用 NLP Agent）
-- Windows / Linux / macOS 均可
+- Python 3.8+（仅当启用 Python Agent）
 
-### 6.2 启动后端
+### 5.2 启动后端
 
 ```bash
 cd backend
@@ -133,7 +95,9 @@ npm install
 npm run dev
 ```
 
-### 6.3 启动前端
+默认后端端口：`8000`（可通过 `PORT` 覆盖）
+
+### 5.3 启动前端
 
 ```bash
 cd frontend
@@ -141,7 +105,9 @@ npm install
 npm run dev
 ```
 
-### 6.4 启动 Python Agent（如启用）
+默认前端开发地址：`http://localhost:3000`
+
+### 5.4 启动 Python Agent（可选）
 
 ```bash
 cd agent-service
@@ -149,48 +115,57 @@ pip install -r requirements.txt
 python run_nlp_agent.py
 ```
 
-### 6.5 访问入口
-- 前端地址：`http://localhost:3000`
-- 后端接口：`http://localhost:8000`
+---
+
+## 6. 数据初始化（推荐）
+
+在 `backend` 目录执行：
+
+```bash
+npm run seed:china
+npm run seed:more-elderly
+npm run seed:high-risk
+npm run seed:agent-bundle
+```
+
+用于快速构建“有老人、有风险、有任务、有闭环”的演示数据。
 
 ---
 
-## 7. 功能流程
+## 7. 关键接口入口
 
-### 问答驱动流程
-1. 用户在 `DataQuery` 输入自然语言问题
-2. Agent 识别意图并先给出回答
-3. 系统判断是否需要升级为任务
-4. 若需要，保存上下文并跳转 `AgentVNext`
-5. 运行台接住上下文，完成任务编排、审批与执行
-6. 事件流与结果回写到闭环中
-7. 指挥中心汇总统计与治理信息
+- 健康检查：`GET /health`
+- API 文档摘要：`GET /api/docs`
+- 运行台任务：`/api/agent-vnext/*`
+- 风险分析：`GET /api/risk-analysis/:elderlyId`
+- 预警管理：`/api/warnings/*`
 
-### 风险处置流程
-1. `RiskWarning` 发现预警事件
-2. 用户可直接查看详情或跳转问答/运行台
-3. 任务执行与处置结果同步回写
-
-### 健康管理流程
-1. `HealthRecords` 录入或上报指标
-2. 系统生成通俗建议和风险判断
-3. 异常情况可直接联动任务处置
+详细契约见 `docs/api-contract.md`。
 
 ---
 
-## 8. 适用场景
+## 8. 推荐演示链路
 
-- 社区养老服务中心
-- 网格化老人管理
-- 健康监测与风险处置
-- 养老服务任务调度
-- 智慧养老展示演示
+1. `DataQuery` 提问并触发升级建议；
+2. 跳转 `AgentVNext` 创建任务并查看事件流；
+3. 在 `RiskWarning` 展示预警处置与回访；
+4. 在 `AgentCommandCenter` 展示闭环治理指标。
 
 ---
 
-## 9. 项目总结
+## 9. 文档导航
 
-银龄智护 Agent 平台以养老场景为核心，把问答、风险、任务、执行和治理串成完整闭环，体现了 Agent 在民生场景中的实际价值。它既能作为课程设计、毕设或竞赛项目展示，也具备较强的演示性与扩展性。
+- 架构：`docs/architecture.md`
+- API 契约：`docs/api-contract.md`
+- Agent 模块：`docs/agent-platform.md`
+- 部署：`DEPLOYMENT.md`
+- 操作流程：`OPERATION_FLOW.md`
+- 数据增强：`DATA_SEED_GUIDE.md`
+- 演示脚本：`DEMO_SCRIPT.md`
+- 项目总结：`PROJECT_SUMMARY.md`
 
-**项目口号：**
-银龄智护 Agent 平台，面向社区养老的智能问答、任务路由、执行编排与闭环治理平台。
+---
+
+## 10. 项目定位一句话
+
+**银龄智护 Agent 平台：面向社区养老的智能问答、任务路由、执行编排与闭环治理平台。**

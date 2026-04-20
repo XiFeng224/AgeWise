@@ -40,6 +40,8 @@ const AgentVNext: React.FC = () => {
   const location = useLocation()
   const { message } = App.useApp()
 
+  const toRiskLevelZh = (level?: string) => level === 'high' ? '高风险' : level === 'medium' ? '中风险' : '低风险'
+
   const [elderlyId, setElderlyId] = useState<number | undefined>(undefined)
   const [elderlyOptions, setElderlyOptions] = useState<Array<{ label: string; value: number }>>([])
   const [strategyMode, setStrategyMode] = useState<'conservative' | 'balanced' | 'aggressive'>('balanced')
@@ -183,7 +185,6 @@ const AgentVNext: React.FC = () => {
 
       const es = new EventSource(sseUrl)
       eventSourceRef.current = es
-      startPolling()
 
       es.onopen = () => {
         retryCount = 0
@@ -507,7 +508,7 @@ const AgentVNext: React.FC = () => {
         <Card style={{ marginBottom: 16 }} title={`最新风险分析 - ${riskReport.elderly?.name || '未知老人'}`}>
           <Row gutter={16}>
             <Col span={6}><Statistic title="风险分数" value={riskReport.summary?.riskScore || 0} /></Col>
-            <Col span={6}><Statistic title="风险等级" value={riskReport.summary?.riskLevel === 'high' ? '高风险' : riskReport.summary?.riskLevel === 'medium' ? '中风险' : '低风险'} /></Col>
+            <Col span={6}><Statistic title="风险等级" value={riskReport.summary?.riskLevelZh || toRiskLevelZh(riskReport.summary?.riskLevel)} /></Col>
             <Col span={6}><Statistic title="趋势" value={riskReport.summary?.trend === 'worsening' ? '恶化' : riskReport.summary?.trend === 'improving' ? '改善' : '稳定'} /></Col>
             <Col span={6}><Statistic title="置信度" value={riskReport.summary?.confidence || 0} suffix="%" /></Col>
           </Row>
@@ -515,7 +516,7 @@ const AgentVNext: React.FC = () => {
           <Alert
             showIcon
             type={riskReport.summary?.riskLevel === 'high' ? 'error' : riskReport.summary?.riskLevel === 'medium' ? 'warning' : 'success'}
-            message={`综合判断：${riskReport.summary?.riskLevel === 'high' ? '高风险' : riskReport.summary?.riskLevel === 'medium' ? '中风险' : '低风险'}`}
+            message={`综合判断：${riskReport.summary?.riskLevelZh || toRiskLevelZh(riskReport.summary?.riskLevel)}`}
             description={
               <div>
                 {(riskReport.analysis?.healthAbnormalities || []).slice(0, 2).map((item: string, idx: number) => <div key={`h-${idx}`}>- {item}</div>)}
@@ -575,7 +576,7 @@ const AgentVNext: React.FC = () => {
                 <Card title="当前老人风险分析摘要" style={{ borderRadius: 16, marginTop: 12 }} extra={<Button size="small" onClick={() => fetchRiskReport(elderlyId)}>刷新分析</Button>}>
                   <Row gutter={12}>
                     <Col span={6}><Statistic title="风险分数" value={riskReport.summary?.riskScore || 0} /></Col>
-                    <Col span={6}><Statistic title="风险等级" value={riskReport.summary?.riskLevel === 'high' ? '高风险' : riskReport.summary?.riskLevel === 'medium' ? '中风险' : '低风险'} /></Col>
+                    <Col span={6}><Statistic title="风险等级" value={riskReport.summary?.riskLevelZh || toRiskLevelZh(riskReport.summary?.riskLevel)} /></Col>
                     <Col span={6}><Statistic title="趋势" value={riskReport.summary?.trend === 'worsening' ? '恶化' : riskReport.summary?.trend === 'improving' ? '改善' : '稳定'} /></Col>
                     <Col span={6}><Statistic title="异常项" value={(riskReport.analysis?.healthAbnormalities?.length || 0) + (riskReport.analysis?.activityAbnormalities?.length || 0)} /></Col>
                   </Row>
@@ -594,7 +595,7 @@ const AgentVNext: React.FC = () => {
                   <Col xs={24} md={12} xl={5}><Text>选择老人</Text><Select showSearch optionFilterProp="label" placeholder="请选择老人" style={{ width: '100%' }} value={elderlyId} onChange={(v) => setElderlyId(v)} options={elderlyOptions} /></Col>
                   <Col xs={24} md={12} xl={4}><Text>策略模式</Text><Select style={{ width: '100%' }} value={strategyMode} onChange={setStrategyMode} options={[{ label: '保守', value: 'conservative' }, { label: '平衡', value: 'balanced' }, { label: '灵敏', value: 'aggressive' }]} /></Col>
                   <Col xs={24} md={12} xl={4}><Text>模块</Text><Select style={{ width: '100%' }} value={module} onChange={setModule} options={[{ label: '护理', value: '护理' }, { label: '医护', value: '医护' }, { label: '后勤', value: '后勤' }, { label: '收费', value: '收费' }, { label: '接待', value: '接待' }]} /></Col>
-                  <Col xs={24} md={12} xl={4}><Text>风险级别</Text><Select style={{ width: '100%' }} value={riskLevel} onChange={setRiskLevel} options={[{ label: '低', value: 'low' }, { label: '中', value: 'medium' }, { label: '高', value: 'high' }]} /></Col>
+                  <Col xs={24} md={12} xl={4}><Text>风险级别</Text><Select style={{ width: '100%' }} value={riskLevel} onChange={setRiskLevel} options={[{ label: '低风险', value: 'low' }, { label: '中风险', value: 'medium' }, { label: '高风险', value: 'high' }]} /></Col>
                   <Col xs={24} xl={7}><Text>模型偏好</Text><Select style={{ width: '100%' }} value={modelPreference} onChange={setModelPreference} options={[{ label: '自动（千问失败切DeepSeek）', value: 'auto' }, { label: '千问优先（失败切DeepSeek）', value: 'qwen' }, { label: 'DeepSeek优先（失败切千问）', value: 'deepseek' }, { label: '规则兜底', value: 'rule' }]} /></Col>
                 </Row>
                 <div style={{ marginTop: 12 }}>

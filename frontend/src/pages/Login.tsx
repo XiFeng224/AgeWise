@@ -61,7 +61,7 @@ const Login: React.FC = () => {
   return (
     <div style={{ 
       minHeight: '100vh', 
-      background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
+      background: 'linear-gradient(135deg, #4f79a7 0%, #2e3e52 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',

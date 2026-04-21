@@ -21,7 +21,7 @@ import { createRateLimiter } from './middleware/rateLimit'
 dotenv.config()
 
 const app = express()
-const PORT = process.env.PORT || 8000
+const PORT = process.env.PORT || 8003
 const shouldAlterSchema = process.env.DB_SYNC_ALTER === 'true'
 
 app.set('trust proxy', 1)

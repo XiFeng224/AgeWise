@@ -18,7 +18,9 @@ import {
   Divider,
   Progress,
   Switch,
-  App
+  App,
+  Empty,
+  Pagination
 } from 'antd'
 import axios from '../utils/axiosInstance'
 import { useLocation } from 'react-router-dom'
@@ -59,6 +61,8 @@ const AgentVNext: React.FC = () => {
   const [taskStatus, setTaskStatus] = useState<TaskStatus>('idle')
   const [queue, setQueue] = useState<QueueTask[]>([])
   const [queueCollapsed, setQueueCollapsed] = useState<boolean>(false)
+  const [queuePage, setQueuePage] = useState<number>(1)
+  const [queuePageSize, setQueuePageSize] = useState<number>(6)
   const [autoPilot, setAutoPilot] = useState<boolean>(true)
   const [maxRetries, setMaxRetries] = useState<number>(2)
   const [runtimeTaskId, setRuntimeTaskId] = useState<string>('')
@@ -91,7 +95,18 @@ const AgentVNext: React.FC = () => {
         const parsedContext = JSON.parse(queryContext)
         if (parsedContext?.query) {
           setEventSummary(parsedContext.query)
-          setTaskSource(parsedContext.escalate ? 'warning' : 'query')
+          const source = parsedContext?.source
+          if (source === 'warning') {
+            setTaskSource('warning')
+          } else {
+            setTaskSource(parsedContext.escalate ? 'query' : 'manual')
+          }
+        }
+        if (parsedContext?.elderlyId && !elderlyId) {
+          setElderlyId(Number(parsedContext.elderlyId))
+        }
+        if (parsedContext?.riskLevel && ['low', 'medium', 'high'].includes(parsedContext.riskLevel)) {
+          setRiskLevel(parsedContext.riskLevel)
         }
         if (parsedContext?.traceId) {
           setLastTraceId(parsedContext.traceId)
@@ -461,6 +476,23 @@ const AgentVNext: React.FC = () => {
 
   const stageProgress = taskStatus === 'done' ? 100 : taskStatus === 'tracking' ? 80 : taskStatus === 'executing' ? 60 : taskStatus === 'pending_approval' ? 40 : taskStatus === 'planning' ? 20 : 0
 
+  const pagedQueue = useMemo(() => {
+    const start = (queuePage - 1) * queuePageSize
+    return queue.slice(start, start + queuePageSize)
+  }, [queue, queuePage, queuePageSize])
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(queue.length / queuePageSize))
+    if (queuePage > totalPages) setQueuePage(totalPages)
+  }, [queue.length, queuePage, queuePageSize])
+
+  const clearQueue = () => {
+    setQueue([])
+    setQueuePage(1)
+    localStorage.removeItem('agent_vnext_queue')
+    message.success('会话列表已清空')
+  }
+
   useEffect(() => {
     if (!runtimeTaskId) return
     if (!statusConsistency.mismatch) return
@@ -533,34 +565,55 @@ const AgentVNext: React.FC = () => {
           <Card
             title="会话列表"
             style={{ borderRadius: 18, height: '100%' }}
-            extra={<Button size="small" onClick={() => setQueueCollapsed((v) => !v)}>{queueCollapsed ? '展开' : '收起'}</Button>}
+            extra={(
+              <Space size={6}>
+                <Button size="small" onClick={() => setQueueCollapsed((v) => !v)}>{queueCollapsed ? '展开' : '收起'}</Button>
+                <Button size="small" danger onClick={clearQueue} disabled={!queue.length}>清空</Button>
+              </Space>
+            )}
           >
             {queueCollapsed ? (
               <Text type="secondary">会话列表已收起，点击右上角展开查看。</Text>
+            ) : queue.length === 0 ? (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无会话" />
             ) : (
-              <List
-                dataSource={queue}
-                locale={{ emptyText: '暂无会话' }}
-                renderItem={(q, index) => (
-                  <List.Item style={{
-                    padding: '10px 12px',
-                    marginBottom: 8,
-                    borderRadius: 12,
-                    border: q.id === runtimeTaskId ? '1px solid #1890ff' : '1px solid #f0f0f0',
-                    background: q.id === runtimeTaskId ? '#e6f4ff' : '#fff'
-                  }}>
-                    <Space direction="vertical" size={2} style={{ width: '100%' }}>
-                      <Space style={{ justifyContent: 'space-between', width: '100%' }}>
-                        <Text strong>{index === 0 ? '当前会话' : `历史会话 ${index}`}</Text>
-                        <Tag color={statusMeta[q.status].color}>{statusMeta[q.status].text}</Tag>
+              <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                <List
+                  dataSource={pagedQueue}
+                  renderItem={(q) => (
+                    <List.Item style={{
+                      padding: '8px 10px',
+                      marginBottom: 4,
+                      borderRadius: 8,
+                      border: q.id === runtimeTaskId ? '1px solid #1890ff' : '1px solid #f0f0f0',
+                      background: q.id === runtimeTaskId ? '#e6f4ff' : '#fff',
+                      transition: 'all 0.3s ease'
+                    }}>
+                      <Space direction="vertical" size={1} style={{ width: '100%' }}>
+                        <Space style={{ justifyContent: 'space-between', width: '100%' }}>
+                          <Text strong style={{ fontSize: 13 }} ellipsis={{ tooltip: q.title }}>{q.title}</Text>
+                          <Tag color={statusMeta[q.status].color}>{statusMeta[q.status].text}</Tag>
+                        </Space>
+                        <Text type="secondary" style={{ fontSize: 11 }}>{q.createdAt}</Text>
+                        {q.traceId ? <Text type="secondary" style={{ fontSize: 10, wordBreak: 'break-all' }} ellipsis={{ tooltip: q.traceId }}>{q.traceId}</Text> : null}
                       </Space>
-                      <Text>{q.title}</Text>
-                      <Text type="secondary">{q.createdAt}</Text>
-                      {q.traceId ? <Text type="secondary">{q.traceId}</Text> : null}
-                    </Space>
-                  </List.Item>
-                )}
-              />
+                    </List.Item>
+                  )}
+                />
+                <Pagination
+                  size="small"
+                  current={queuePage}
+                  pageSize={queuePageSize}
+                  total={queue.length}
+                  showSizeChanger
+                  pageSizeOptions={[4, 6, 8, 10]}
+                  onChange={(page, pageSize) => {
+                    setQueuePage(page)
+                    if (pageSize !== queuePageSize) setQueuePageSize(pageSize)
+                  }}
+                  showTotal={(total) => `共 ${total} 条`}
+                />
+              </Space>
             )}
           </Card>
         </Col>

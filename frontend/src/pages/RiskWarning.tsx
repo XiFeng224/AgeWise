@@ -177,6 +177,38 @@ const RiskWarning: React.FC = () => {
     setHandleVisible(true)
   }
 
+  const goToRuntimeWithWarning = (warning: WarningItem) => {
+    const warningContext = {
+      source: 'warning',
+      warningId: warning.id,
+      elderlyId: warning.elderlyId,
+      query: warning.title,
+      answer: warning.description,
+      traceId: `warning-${warning.id}`,
+      escalate: true,
+      suggestedAction: [
+        `优先处置：${warning.warningTypeZh || toWarningTypeZh(warning.warningType)}`,
+        `风险等级：${warning.riskLevelZh || getRiskLevelConfig(warning.riskLevel).text}`,
+        '创建任务并审批执行'
+      ],
+      warningType: warning.warningType,
+      warningTypeZh: warning.warningTypeZh || toWarningTypeZh(warning.warningType),
+      riskLevel: warning.riskLevel,
+      riskLevelZh: warning.riskLevelZh || getRiskLevelConfig(warning.riskLevel).text,
+      title: warning.title,
+      description: warning.description,
+      createdAt: warning.createdAt
+    }
+
+    localStorage.setItem('agent_query_context', JSON.stringify(warningContext))
+    navigate('/agent/vnext', {
+      state: {
+        elderlyId: warning.elderlyId,
+        warningContext
+      }
+    })
+  }
+
   const openDetail = async (warningId: number) => {
     try {
       const response = await axios.get(`/warnings/${warningId}`)
@@ -289,6 +321,13 @@ const RiskWarning: React.FC = () => {
             disabled={record.status === 'resolved'}
           >
             处理
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => goToRuntimeWithWarning(record)}
+          >
+            升级处置
           </Button>
         </Space>
       )
@@ -442,7 +481,14 @@ const RiskWarning: React.FC = () => {
         extra={
           <Space>
             <Button onClick={() => navigate('/query')}>去智能问答</Button>
-            <Button type="primary" onClick={() => navigate('/agent/vnext')}>去运行台处置</Button>
+            <Button type="primary" onClick={() => {
+              if (!warnings.length) {
+                message.info('当前没有可升级处置的预警')
+                return
+              }
+              const target = warnings.find((w) => w.status !== 'resolved') || warnings[0]
+              goToRuntimeWithWarning(target)
+            }}>去运行台处置</Button>
             <Button onClick={() => navigate('/agent-workbench')}>去总控工作台</Button>
             <DatePicker.RangePicker
               value={dateRange}
